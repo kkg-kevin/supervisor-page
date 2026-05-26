@@ -1,6 +1,4 @@
 import { Filters } from '../types';
-import { Button } from './ui/button';
-import { X } from 'lucide-react';
 
 interface FiltersBarProps {
   filters: Filters;
@@ -19,33 +17,32 @@ export function FiltersBar({ filters, onFilterChange, onClearFilters }: FiltersB
   const hasActiveFilters = filters.status !== 'all';
 
   return (
-    <div className="flex flex-wrap items-center gap-3 mb-4 p-4 bg-white border border-gray-200 rounded-lg">
-      <span className="text-sm font-medium text-gray-700">Status:</span>
-
-      <div className="inline-flex overflow-hidden rounded-md border border-gray-200 bg-gray-50">
+    <div className="mb-4 flex items-center border-b border-gray-200 bg-white">
+      <div className="flex items-center gap-8">
         {statusFilters.map((filter) => (
-          <Button
+          <button
             key={filter.value}
             type="button"
-            variant={filters.status === filter.value ? 'default' : 'ghost'}
-            size="sm"
             onClick={() => onFilterChange('status', filter.value)}
-            className={
+            className={`border-b-2 px-0 py-3 text-sm transition-colors ${
               filters.status === filter.value
-                ? 'rounded-none bg-[#25476a] hover:bg-[#25476a]'
-                : 'rounded-none'
-            }
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-gray-950 hover:text-blue-600'
+            }`}
           >
             {filter.label}
-          </Button>
+          </button>
         ))}
       </div>
 
       {hasActiveFilters && (
-        <Button variant="outline" size="sm" onClick={onClearFilters} className="ml-auto">
-          <X className="mr-2 h-4 w-4" />
+        <button
+          type="button"
+          onClick={onClearFilters}
+          className="ml-auto py-3 text-sm text-gray-500 hover:text-blue-600"
+        >
           Clear Filters
-        </Button>
+        </button>
       )}
     </div>
   );

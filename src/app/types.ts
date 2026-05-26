@@ -22,6 +22,7 @@ export type Attendance = {
 
 export type Assignment = {
   id: string;
+  sessionId: string;
   title: string;
   issued: boolean;
   submittedStudentIds: string[];
@@ -45,6 +46,7 @@ export type Course = {
   advanceClaimed: number;
   claimAmount: number;
   claimStatus: ClaimStatus;
+  etimsDocument: string;
   students: Student[];
   sessions: Session[];
   attendance: Attendance[];

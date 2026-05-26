@@ -12,7 +12,8 @@ import { ClipboardList, Clock } from 'lucide-react';
 export default function App() {
   const [courses, setCourses] = useState<CourseWithMentor[]>(INITIAL_COURSES);
   const [reviewActions, setReviewActions] = useState<ReviewAction[]>([]);
-  const [selectedCourseId, setSelectedCourseId] = useState<string | null>(courses[0]?.id ?? null);
+  const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
+  const [isReviewPageOpen, setIsReviewPageOpen] = useState(false);
   const [filters, setFilters] = useState<Filters>({ status: 'all' });
 
   const filteredCourses = useMemo(() => {
@@ -47,6 +48,15 @@ export default function App() {
     );
   };
 
+  const openCourseReview = (courseId: string) => {
+    setSelectedCourseId(courseId);
+    setIsReviewPageOpen(true);
+  };
+
+  const closeCourseReview = () => {
+    setIsReviewPageOpen(false);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-[#25476a] text-white shadow-lg">
@@ -59,58 +69,52 @@ export default function App() {
       </header>
 
       <main className="max-w-[1600px] mx-auto px-6 py-6">
-        <StatsOverview courses={courses} />
+        {isReviewPageOpen ? (
+          <ClaimDetails course={selectedCourse} onReview={updateReview} onBack={closeCourseReview} />
+        ) : (
+          <>
+            <StatsOverview courses={courses} />
 
-        <Tabs defaultValue="claims" className="space-y-4">
-          <TabsList className="bg-white border border-gray-200">
-            <TabsTrigger value="claims" className="flex items-center gap-2">
-              <ClipboardList size={18} />
-              Claim Review
-            </TabsTrigger>
-            <TabsTrigger value="timeline" className="flex items-center gap-2">
-              <Clock size={18} />
-              Submission Timeline
-            </TabsTrigger>
-          </TabsList>
+            <Tabs defaultValue="claims" className="space-y-4">
+              <TabsList className="bg-white border border-gray-200">
+                <TabsTrigger value="claims" className="flex items-center gap-2">
+                  <ClipboardList size={18} />
+                  Claim Review
+                </TabsTrigger>
+                <TabsTrigger value="timeline" className="flex items-center gap-2">
+                  <Clock size={18} />
+                  Submission Timeline
+                </TabsTrigger>
+              </TabsList>
 
-          <TabsContent value="claims" className="space-y-4">
-            <FiltersBar
-              filters={filters}
-              onFilterChange={handleFilterChange}
-              onClearFilters={handleClearFilters}
-            />
-
-            <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-              <div className="lg:col-span-2">
-                <ClaimsList
-                  courses={filteredCourses}
-                  selectedCourseId={selectedCourseId}
-                  onSelectCourse={setSelectedCourseId}
+              <TabsContent value="claims" className="space-y-4">
+                <FiltersBar
+                  filters={filters}
+                  onFilterChange={handleFilterChange}
+                  onClearFilters={handleClearFilters}
                 />
-              </div>
-              <div className="lg:col-span-3">
-                <ClaimDetails course={selectedCourse} onReview={updateReview} />
-              </div>
-            </div>
-          </TabsContent>
 
-          <TabsContent value="timeline">
-            <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-              <div className="lg:col-span-2">
+                <div className="space-y-6">
+                  <ClaimsList
+                    courses={filteredCourses}
+                    selectedCourseId={selectedCourseId}
+                    onSelectCourse={openCourseReview}
+                  />
+                </div>
+              </TabsContent>
+
+              <TabsContent value="timeline">
                 <CourseActivityTimeline
                   courses={courses}
                   selectedCourseId={selectedCourseId}
-                  onSelectCourse={setSelectedCourseId}
+                  onSelectCourse={openCourseReview}
                 />
-              </div>
-              <div className="lg:col-span-3">
-                <ClaimDetails course={selectedCourse} onReview={updateReview} />
-              </div>
-            </div>
-          </TabsContent>
-        </Tabs>
+              </TabsContent>
+            </Tabs>
+          </>
+        )}
 
-        {reviewActions.length > 0 && (
+        {!isReviewPageOpen && reviewActions.length > 0 && (
           <p className="mt-4 text-xs text-gray-500">
             {reviewActions.length} local review decision{reviewActions.length === 1 ? '' : 's'} stored
             in this session.

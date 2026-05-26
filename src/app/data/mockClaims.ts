@@ -5,6 +5,8 @@ const students = [
   { id: 'st-2', name: 'Liam Otieno' },
   { id: 'st-3', name: 'Zuri Kamau' },
   { id: 'st-4', name: 'Ethan Mwangi' },
+  { id: 'st-5', name: 'Grace Wanjiku' },
+  { id: 'st-6', name: 'Hassan Abdi' },
 ];
 
 const attendanceFor = (sessionId: string, absentees: string[] = []) =>
@@ -25,6 +27,7 @@ export const INITIAL_COURSES: CourseWithMentor[] = [
     advanceClaimed: 0,
     claimAmount: 45000,
     claimStatus: 'Pending Review',
+    etimsDocument: 'ETIMS_GameDesign_001.pdf',
     submittedAt: '2026-05-18T09:30:00',
     students,
     sessions: [
@@ -42,6 +45,7 @@ export const INITIAL_COURSES: CourseWithMentor[] = [
     assignments: [
       {
         id: 'gd-a1',
+        sessionId: 'gd-s1',
         title: 'Paper prototype',
         issued: true,
         submittedStudentIds: ['st-1', 'st-2', 'st-3', 'st-4'],
@@ -49,6 +53,7 @@ export const INITIAL_COURSES: CourseWithMentor[] = [
       },
       {
         id: 'gd-a2',
+        sessionId: 'gd-s4',
         title: 'Playable loop',
         issued: true,
         submittedStudentIds: ['st-1', 'st-2', 'st-3', 'st-4'],
@@ -82,6 +87,7 @@ export const INITIAL_COURSES: CourseWithMentor[] = [
     advanceClaimed: 18000,
     claimAmount: 18000,
     claimStatus: 'Pending Review',
+    etimsDocument: 'ETIMS_Animation_002.pdf',
     submittedAt: '2026-05-17T14:10:00',
     students,
     sessions: [
@@ -99,6 +105,7 @@ export const INITIAL_COURSES: CourseWithMentor[] = [
     assignments: [
       {
         id: 'an-a1',
+        sessionId: 'an-s1',
         title: 'Walk cycle',
         issued: true,
         submittedStudentIds: ['st-1', 'st-2', 'st-3'],
@@ -106,6 +113,7 @@ export const INITIAL_COURSES: CourseWithMentor[] = [
       },
       {
         id: 'an-a2',
+        sessionId: 'an-s3',
         title: 'Character blocking',
         issued: true,
         submittedStudentIds: ['st-1', 'st-2'],
@@ -133,6 +141,7 @@ export const INITIAL_COURSES: CourseWithMentor[] = [
     advanceClaimed: 0,
     claimAmount: 52000,
     claimStatus: 'Approved',
+    etimsDocument: 'ETIMS_Robotics_003.pdf',
     submittedAt: '2026-05-16T10:45:00',
     students,
     sessions: [
@@ -150,6 +159,7 @@ export const INITIAL_COURSES: CourseWithMentor[] = [
     assignments: [
       {
         id: 'rb-a1',
+        sessionId: 'rb-s2',
         title: 'Sensor circuit',
         issued: true,
         submittedStudentIds: ['st-1', 'st-2', 'st-3', 'st-4'],
@@ -157,6 +167,7 @@ export const INITIAL_COURSES: CourseWithMentor[] = [
       },
       {
         id: 'rb-a2',
+        sessionId: 'rb-s4',
         title: 'Obstacle routine',
         issued: true,
         submittedStudentIds: ['st-1', 'st-2', 'st-3', 'st-4'],
@@ -190,6 +201,7 @@ export const INITIAL_COURSES: CourseWithMentor[] = [
     advanceClaimed: 15000,
     claimAmount: 15000,
     claimStatus: 'Rejected',
+    etimsDocument: 'ETIMS_3DModeling_004.pdf',
     submittedAt: '2026-05-15T16:20:00',
     students,
     sessions: [
@@ -207,6 +219,7 @@ export const INITIAL_COURSES: CourseWithMentor[] = [
     assignments: [
       {
         id: 'md-a1',
+        sessionId: 'md-s1',
         title: 'Low-poly object',
         issued: true,
         submittedStudentIds: ['st-1', 'st-2'],
@@ -214,6 +227,7 @@ export const INITIAL_COURSES: CourseWithMentor[] = [
       },
       {
         id: 'md-a2',
+        sessionId: 'md-s3',
         title: 'Texture pass',
         issued: false,
         submittedStudentIds: [],
