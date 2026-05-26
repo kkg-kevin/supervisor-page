@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
 import { CourseWithMentor, Filters, ReviewAction } from './types';
 import { INITIAL_COURSES } from './data/mockClaims';
-import { StatsOverview } from './components/StatsOverview';
 import { FiltersBar } from './components/FiltersBar';
 import { ClaimsList } from './components/ClaimsList';
 import { ClaimDetails } from './components/ClaimDetails';
@@ -14,12 +13,26 @@ export default function App() {
   const [reviewActions, setReviewActions] = useState<ReviewAction[]>([]);
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
   const [isReviewPageOpen, setIsReviewPageOpen] = useState(false);
-  const [filters, setFilters] = useState<Filters>({ status: 'all' });
+  const [filters, setFilters] = useState<Filters>({ status: 'all', search: '' });
 
   const filteredCourses = useMemo(() => {
+    const searchTerm = filters.search.trim().toLowerCase();
+
     return courses.filter((course) => {
-      if (filters.status === 'all') return true;
-      return course.claimStatus === filters.status;
+      const matchesStatus = filters.status === 'all' || course.claimStatus === filters.status;
+      const searchableText = [
+        course.name,
+        course.mentor.name,
+        course.teachingMethod,
+        course.paymentType,
+        course.claimStatus,
+        course.etimsDocument,
+      ]
+        .join(' ')
+        .toLowerCase();
+      const matchesSearch = searchTerm === '' || searchableText.includes(searchTerm);
+
+      return matchesStatus && matchesSearch;
     });
   }, [courses, filters]);
 
@@ -30,7 +43,7 @@ export default function App() {
   };
 
   const handleClearFilters = () => {
-    setFilters({ status: 'all' });
+    setFilters({ status: 'all', search: '' });
   };
 
   const updateReview = (action: ReviewAction) => {
@@ -73,8 +86,6 @@ export default function App() {
           <ClaimDetails course={selectedCourse} onReview={updateReview} onBack={closeCourseReview} />
         ) : (
           <>
-            <StatsOverview courses={courses} />
-
             <Tabs defaultValue="claims" className="space-y-4">
               <TabsList className="bg-white border border-gray-200">
                 <TabsTrigger value="claims" className="flex items-center gap-2">

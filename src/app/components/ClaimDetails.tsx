@@ -1,9 +1,8 @@
-import { useEffect, useState, type ElementType } from 'react';
-import { CourseWithMentor, ReviewAction } from '../types';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { useEffect, useState } from 'react';
+import { CourseWithMentor, ReviewAction, Session } from '../types';
+import { Card, CardContent } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
-import { Progress } from './ui/progress';
 import { Textarea } from './ui/textarea';
 import {
   Dialog,
@@ -14,7 +13,11 @@ import {
 } from './ui/dialog';
 import { format } from 'date-fns';
 import {
+  getAdvancePayable,
+  getAmountPayable,
+  getHourlyRate,
   getRemainingBalance,
+  getRequestedPayment,
   getReviewMetrics,
   getValidationMessage,
   isClaimValid,
@@ -22,9 +25,8 @@ import {
 import {
   AlertCircle,
   ArrowLeft,
-  BookOpen,
-  Calendar,
   CheckCircle2,
+  CheckSquare,
   ChevronLeft,
   ChevronRight,
   ExternalLink,
@@ -51,7 +53,7 @@ const getStatusColor = (status: string) => {
   }
 };
 
-const metricColor = (value: number) => (value >= 90 ? 'text-green-700' : 'text-amber-700');
+const percent = (value: number, total: number) => (total === 0 ? 100 : Math.round((value / total) * 100));
 
 export function ClaimDetails({ course, onReview, onBack }: ClaimDetailsProps) {
   const [rejectionReason, setRejectionReason] = useState('');
@@ -79,7 +81,12 @@ export function ClaimDetails({ course, onReview, onBack }: ClaimDetailsProps) {
   const metrics = getReviewMetrics(course);
   const validationMessage = getValidationMessage(course);
   const canApprove = isClaimValid(course);
+  const amountPayable = getAmountPayable(course);
+  const advancePayable = getAdvancePayable(course);
+  const requestedPayment = getRequestedPayment(course);
   const remainingBalance = getRemainingBalance(course);
+  const hourlyRate = getHourlyRate(course);
+  const isGoogleMeetClaim = course.teachingMethod === 'Google Meet';
 
   const presentFor = (sessionId: string, studentId: string) =>
     course.attendance.find((mark) => mark.sessionId === sessionId && mark.studentId === studentId)
@@ -90,6 +97,20 @@ export function ClaimDetails({ course, onReview, onBack }: ClaimDetailsProps) {
     (assignment) => assignment.sessionId === selectedSession?.id
   );
   const sessionReports = course.reports.filter((report) => report.sessionId === selectedSession?.id);
+  const selectedSessionAttendance = course.attendance.filter(
+    (mark) => mark.sessionId === selectedSession?.id
+  );
+  const presentCount = selectedSessionAttendance.filter((mark) => mark.present).length;
+  const sessionAttendancePercent = percent(presentCount, selectedSessionAttendance.length);
+  const issuedSessionAssignments = sessionAssignments.filter((assignment) => assignment.issued);
+  const expectedSessionAssignments = issuedSessionAssignments.length * course.students.length;
+  const gradedSessionAssignments = issuedSessionAssignments.reduce(
+    (total, assignment) => total + assignment.gradedStudentIds.length,
+    0
+  );
+  const sessionAssignmentPercent = percent(gradedSessionAssignments, expectedSessionAssignments);
+  const completedSessionReports = sessionReports.filter((report) => report.done).length;
+  const sessionReportPercent = percent(completedSessionReports, sessionReports.length);
 
   const goToPreviousSession = () => {
     setSelectedSessionIndex((current) => Math.max(current - 1, 0));
@@ -164,7 +185,7 @@ export function ClaimDetails({ course, onReview, onBack }: ClaimDetailsProps) {
             </section>
             <section>
               <h2>Claim Amount</h2>
-              <p class="amount">KES ${course.claimAmount.toLocaleString()}</p>
+              <p class="amount">KES ${requestedPayment.toLocaleString()}</p>
               <p class="stamp">MENTOR eTIMS SUBMISSION</p>
             </section>
           </main>
@@ -182,86 +203,113 @@ export function ClaimDetails({ course, onReview, onBack }: ClaimDetailsProps) {
 
   return (
     <>
-      <Card className="border-gray-200">
-        <CardHeader className="bg-[#25476a] text-white">
-          <CardTitle className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              {onBack && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={onBack}
-                  className="h-9 w-9 text-white hover:bg-white/10 hover:text-white"
-                  aria-label="Back to claims"
-                >
-                  <ArrowLeft className="h-5 w-5" />
-                </Button>
-              )}
-              <span>Course Review</span>
-            </div>
-            <Badge className={getStatusColor(course.claimStatus)}>{course.claimStatus}</Badge>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-6 space-y-6">
-        <section>
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <div>
-              <p className="text-xl text-[#25476a]">{course.name}</p>
-              <p className="text-sm text-gray-600">{course.mentor.name}</p>
-            </div>
-            {course.submittedAt && (
-              <p className="flex items-center gap-2 text-sm text-gray-600">
-                <Calendar size={16} className="text-gray-400" />
-                {format(new Date(course.submittedAt), 'MMM dd, yyyy h:mm a')}
-              </p>
+      <div className="space-y-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 items-center gap-3">
+            {onBack && (
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={onBack}
+                className="h-9 w-9 shrink-0"
+                aria-label="Back to claims"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
             )}
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="truncate text-2xl font-semibold text-[#08294f]">{course.name}</h2>
+                <Badge className={getStatusColor(course.claimStatus)}>{course.claimStatus}</Badge>
+              </div>
+              <p className="text-sm text-[#416489]">
+                {course.mentor.name}
+                {course.submittedAt ? ` - Submitted ${format(new Date(course.submittedAt), 'MMM dd, yyyy h:mm a')}` : ''}
+              </p>
+            </div>
           </div>
+        </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-            <SummaryTile label="Total Earnings" value={`KES ${course.totalEarnings.toLocaleString()}`} />
-            <SummaryTile label="Advance Claimed" value={`KES ${course.advanceClaimed.toLocaleString()}`} />
-            <SummaryTile label="Remaining Balance" value={`KES ${remainingBalance.toLocaleString()}`} />
-            <SummaryTile label="Claim Amount" value={`KES ${course.claimAmount.toLocaleString()}`} />
+        <section className="rounded-2xl border border-[#d6e0ea] bg-white p-5 shadow-sm">
+          <div className="grid gap-5 lg:grid-cols-[240px_1fr_1fr]">
+            <div className="flex items-center gap-4">
+              <ProgressRing value={metrics.completionPercent} />
+              <div>
+                <p className="text-sm text-[#315b87]">{isGoogleMeetClaim ? 'Sessions' : 'Students'}</p>
+                <p className="text-lg font-bold text-[#08294f]">
+                  {isGoogleMeetClaim ? course.sessions.length : course.students.length}
+                </p>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-[#d3e1ee] bg-[#f8fbff] p-4">
+              <p className="text-xs text-[#315b87]">Amount Payable</p>
+              <p className="mt-1 text-xl font-bold text-[#08294f]">
+                KSh {amountPayable.toLocaleString()}
+              </p>
+              <div className="mt-4 flex items-center justify-between border-t border-[#dbe5ef] pt-3 text-xs">
+                <span className="text-[#315b87]">Advance Payable</span>
+                <span className="font-bold text-[#c65300]">KSh {advancePayable.toLocaleString()}</span>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-[#f7c456] bg-[#fff9e8] p-4">
+              <p className="text-xs text-[#d15d00]">Requested Payment</p>
+              <p className="mt-1 text-xl font-bold text-[#d15d00]">
+                KSh {requestedPayment.toLocaleString()}
+              </p>
+              <div className="mt-4 flex items-center justify-between border-t border-[#f3c65c] pt-3 text-xs">
+                <span className="text-[#d15d00]">
+                  {course.paymentType === 'Advance' ? 'Balance' : 'Rate'}
+                </span>
+                <span className="font-bold text-[#a33f00]">
+                  {course.paymentType === 'Advance'
+                    ? `KSh ${remainingBalance.toLocaleString()}`
+                    : `KSh ${hourlyRate.toLocaleString()}/hr`}
+                </span>
+              </div>
+            </div>
           </div>
-        </section>
-
-        <section className="grid grid-cols-1 md:grid-cols-4 gap-3">
-          <MetricTile label="Completion" value={metrics.completionPercent} />
-          <MetricTile label="Attendance" value={metrics.attendancePercent} />
-          <MetricTile label="Assignments" value={metrics.assignmentsPercent} />
-          <MetricTile label="Reports" value={metrics.reportsPercent} />
         </section>
 
         {validationMessage && (
-          <p className="flex items-center gap-2 text-sm text-amber-700">
+          <p className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
             <AlertCircle size={16} />
             {validationMessage}
           </p>
         )}
 
-        <section className="rounded-lg border border-gray-200 bg-white">
-          <div className="flex flex-col gap-4 border-b border-gray-200 p-4 md:flex-row md:items-center md:justify-between">
-            <div>
-              <SectionTitle icon={BookOpen} title="Session Review" />
-              <p className="text-sm text-gray-600">
-                {format(new Date(selectedSession.date), 'MMM dd, yyyy')} - {selectedSession.durationMinutes} min
-              </p>
+        {isGoogleMeetClaim ? (
+          <GoogleMeetSessionTable sessions={course.sessions} />
+        ) : (
+        <section>
+          <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center">
+              <div className="mr-1">
+                <p className="text-lg font-bold text-[#08294f]">Session {selectedSessionIndex + 1}</p>
+                <p className="text-sm text-[#416489]">
+                  {format(new Date(selectedSession.date), 'yyyy-MM-dd')}
+                </p>
+              </div>
+              <SessionMetric label="Attendance" value={sessionAttendancePercent} />
+              <SessionMetric label="Assignment" value={sessionAssignmentPercent} />
+              <SessionMetric label="Report" value={sessionReportPercent} />
             </div>
 
-            <div className="flex items-center gap-4 self-start rounded-full bg-[#edf4fa] px-3 py-2 text-[#25476a] md:self-auto">
+            <div className="flex items-center gap-5 self-start text-[#416489] lg:self-auto">
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
                 onClick={goToPreviousSession}
                 disabled={selectedSessionIndex === 0}
-                className="h-8 w-8 rounded-full text-[#25476a] hover:bg-white"
+                className="h-8 w-8 text-[#8cadca] hover:bg-white hover:text-[#25476a]"
                 aria-label="Previous session"
               >
                 <ChevronLeft className="h-5 w-5" />
               </Button>
-              <span className="min-w-14 text-center text-sm font-medium">
+              <span className="min-w-14 text-center text-sm">
                 {selectedSessionIndex + 1} / {course.sessions.length}
               </span>
               <Button
@@ -270,7 +318,7 @@ export function ClaimDetails({ course, onReview, onBack }: ClaimDetailsProps) {
                 size="icon"
                 onClick={goToNextSession}
                 disabled={selectedSessionIndex === course.sessions.length - 1}
-                className="h-8 w-8 rounded-full text-[#25476a] hover:bg-white"
+                className="h-8 w-8 text-[#416489] hover:bg-white hover:text-[#25476a]"
                 aria-label="Next session"
               >
                 <ChevronRight className="h-5 w-5" />
@@ -278,107 +326,102 @@ export function ClaimDetails({ course, onReview, onBack }: ClaimDetailsProps) {
             </div>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[920px] text-sm">
-              <thead className="bg-[#eaf2fa] text-[#25476a]">
-                <tr>
-                  <th className="w-[34%] px-5 py-4 text-left text-xs font-semibold uppercase">
-                    Student
-                  </th>
-                  <th className="w-[18%] border-l border-blue-100 px-5 py-4 text-center text-xs font-semibold uppercase">
-                    Attendance
-                  </th>
-                  <th className="w-[28%] border-l border-blue-100 px-5 py-4 text-center text-xs font-semibold uppercase">
-                    Assignment
-                  </th>
-                  <th className="w-[20%] border-l border-blue-100 px-5 py-4 text-center text-xs font-semibold uppercase">
-                    Report
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {course.students.map((student) => {
-                  const isPresent = presentFor(selectedSession.id, student.id);
-                  const reportDone =
-                    sessionReports.length > 0 && sessionReports.every((report) => report.done);
+          <div className="overflow-hidden rounded-2xl border border-[#d6e0ea] bg-white">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[920px] text-sm">
+                <thead className="bg-[#eaf2fa] text-[#08294f]">
+                  <tr>
+                    <th className="w-[40%] px-4 py-4 text-left text-xs font-semibold uppercase tracking-normal text-[#416489]">
+                      Student
+                    </th>
+                    <th className="w-[19%] border-l border-[#d6e0ea] px-4 py-4 text-center text-xs font-semibold uppercase tracking-normal">
+                      Attendance
+                    </th>
+                    <th className="w-[24%] border-l border-[#d6e0ea] px-4 py-4 text-center text-base font-semibold uppercase tracking-normal">
+                      Assignment
+                    </th>
+                    <th className="w-[17%] border-l border-[#d6e0ea] px-4 py-4 text-center text-base font-semibold uppercase tracking-normal">
+                      Report
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#e3e8ee]">
+                  {course.students.map((student) => {
+                    const isPresent = presentFor(selectedSession.id, student.id);
+                    const reportDone =
+                      sessionReports.length > 0 && sessionReports.every((report) => report.done);
 
-                  return (
-                    <tr key={student.id} className="bg-white">
-                      <td className="px-5 py-5">
-                        <div className="flex items-center gap-3">
-                          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#25476a] text-xs font-semibold text-white">
-                            {getInitials(student.name)}
-                          </span>
-                          <span className="font-medium text-gray-950">{student.name}</span>
-                        </div>
-                      </td>
-                      <td className="border-l border-gray-100 px-5 py-5 text-center">
-                        <div className="flex flex-col items-center gap-1">
-                          <span
-                            className={`relative h-8 w-16 rounded-full ${
-                              isPresent ? 'bg-green-500' : 'bg-red-400'
-                            }`}
-                            aria-label={isPresent ? 'Present' : 'Absent'}
-                          >
+                    return (
+                      <tr key={student.id} className="bg-white">
+                        <td className="px-4 py-5">
+                          <div className="flex items-center gap-3">
+                            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#153e68] text-xs font-semibold text-white">
+                              {getInitials(student.name)}
+                            </span>
+                            <span className="font-semibold text-[#08294f]">{student.name}</span>
+                          </div>
+                        </td>
+                        <td className="border-l border-[#e3e8ee] px-4 py-5 text-center">
+                          <div className="flex flex-col items-center gap-1">
                             <span
-                              className={`absolute top-1 h-6 w-6 rounded-full bg-white transition-transform ${
-                                isPresent ? 'right-1' : 'left-1'
+                              className={`relative h-7 w-14 rounded-full ${
+                                isPresent ? 'bg-[#06c167]' : 'bg-red-400'
                               }`}
-                            />
-                          </span>
-                          <span className={isPresent ? 'text-xs text-green-700' : 'text-xs text-red-600'}>
-                            {isPresent ? 'Present' : 'Absent'}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="border-l border-gray-100 px-5 py-5">
-                        <div className="flex flex-wrap justify-center gap-2">
-                          {sessionAssignments.length === 0 ? (
-                            <Badge className="bg-gray-100 text-gray-700 hover:bg-gray-100">
-                              Not issued
-                            </Badge>
-                          ) : (
-                            sessionAssignments.map((assignment) => (
-                              <AssignmentBadge
-                                key={assignment.id}
-                                issued={assignment.issued}
-                                submitted={assignment.submittedStudentIds.includes(student.id)}
-                                graded={assignment.gradedStudentIds.includes(student.id)}
+                              aria-label={isPresent ? 'Present' : 'Absent'}
+                            >
+                              <span
+                                className={`absolute top-1 h-5 w-5 rounded-full bg-white transition-transform ${
+                                  isPresent ? 'right-1' : 'left-1'
+                                }`}
                               />
-                            ))
-                          )}
-                        </div>
-                      </td>
-                      <td className="border-l border-gray-100 px-5 py-5 text-center">
-                        <Badge
-                          className={
-                            reportDone
-                              ? 'bg-green-100 text-green-800 hover:bg-green-100'
-                              : 'bg-red-50 text-red-600 hover:bg-red-50 border border-red-200'
-                          }
-                        >
-                          {reportDone ? 'Done' : 'Pending'}
-                        </Badge>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                            </span>
+                            <span className={isPresent ? 'text-xs font-semibold text-[#009b52]' : 'text-xs font-semibold text-red-600'}>
+                              {isPresent ? 'Present' : 'Absent'}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="border-l border-[#e3e8ee] px-4 py-5">
+                          <div className="flex flex-wrap justify-center gap-2">
+                            {sessionAssignments.length === 0 ? (
+                              <Badge className="rounded-full bg-gray-100 px-3 py-1 text-gray-700 hover:bg-gray-100">
+                                Not issued
+                              </Badge>
+                            ) : (
+                              sessionAssignments.map((assignment) => (
+                                <AssignmentBadge
+                                  key={assignment.id}
+                                  issued={assignment.issued}
+                                  submitted={assignment.submittedStudentIds.includes(student.id)}
+                                  graded={assignment.gradedStudentIds.includes(student.id)}
+                                />
+                              ))
+                            )}
+                          </div>
+                        </td>
+                        <td className="border-l border-[#e3e8ee] px-4 py-5 text-center">
+                          <ReportBadge done={reportDone} />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         </section>
+        )}
 
         {course.claimStatus === 'Rejected' && course.rejectionReason && (
-          <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-            <p className="text-sm text-red-800 mb-1">Rejection Comment:</p>
+          <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+            <p className="mb-1 text-sm text-red-800">Rejection Comment:</p>
             <p className="text-sm text-red-900">{course.rejectionReason}</p>
           </div>
         )}
 
-        <section className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+        <section className="rounded-lg border border-gray-200 bg-white p-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex min-w-0 items-center gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white text-[#25476a]">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#eaf2fa] text-[#25476a]">
                 <FileText size={20} />
               </div>
               <div className="min-w-0">
@@ -400,7 +443,7 @@ export function ClaimDetails({ course, onReview, onBack }: ClaimDetailsProps) {
         </section>
 
         {course.claimStatus === 'Pending Review' && (
-          <div className="space-y-3 pt-4 border-t">
+          <div className="space-y-3 rounded-lg border border-gray-200 bg-white p-4">
             {showRejectionInput ? (
               <div className="space-y-3">
                 <Textarea
@@ -448,8 +491,7 @@ export function ClaimDetails({ course, onReview, onBack }: ClaimDetailsProps) {
             )}
           </div>
         )}
-        </CardContent>
-      </Card>
+      </div>
 
       <Dialog open={isEtimsPreviewOpen} onOpenChange={setIsEtimsPreviewOpen}>
         <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-3xl">
@@ -490,7 +532,7 @@ export function ClaimDetails({ course, onReview, onBack }: ClaimDetailsProps) {
                 <div className="border-t border-gray-200 pt-5">
                   <p className="text-sm text-gray-500">Claim Amount</p>
                   <p className="mt-1 text-3xl" style={{ color: '#25476a' }}>
-                    KES {course.claimAmount.toLocaleString()}
+                    KES {requestedPayment.toLocaleString()}
                   </p>
                 </div>
 
@@ -513,15 +555,6 @@ export function ClaimDetails({ course, onReview, onBack }: ClaimDetailsProps) {
   );
 }
 
-function SummaryTile({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-      <p className="text-xs text-gray-500">{label}</p>
-      <p className="mt-1 text-lg text-[#25476a]">{value}</p>
-    </div>
-  );
-}
-
 function PreviewField({ label, value }: { label: string; value: string }) {
   return (
     <div>
@@ -531,14 +564,121 @@ function PreviewField({ label, value }: { label: string; value: string }) {
   );
 }
 
-function MetricTile({ label, value }: { label: string; value: number }) {
+function GoogleMeetSessionTable({ sessions }: { sessions: Session[] }) {
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-3">
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-xs text-gray-500">{label}</p>
-        <p className={`text-sm font-medium ${metricColor(value)}`}>{value}%</p>
+    <section>
+      <div className="mb-5">
+        <p className="text-lg font-bold text-[#08294f]">Google Meet Sessions</p>
+        <p className="text-sm text-[#416489]">Scheduled session review</p>
       </div>
-      <Progress value={value} className="mt-2 h-2 bg-gray-200" />
+
+      <div className="overflow-hidden rounded-2xl border border-[#d6e0ea] bg-white">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[920px] text-sm">
+            <thead className="bg-[#eaf2fa] text-[#08294f]">
+              <tr>
+                <th className="w-[18%] px-5 py-4 text-left text-xs font-semibold uppercase tracking-normal text-[#416489]">
+                  Session
+                </th>
+                <th className="w-[32%] border-l border-[#d6e0ea] px-5 py-4 text-left text-xs font-semibold uppercase tracking-normal text-[#416489]">
+                  Session Scheduled
+                </th>
+                <th className="w-[25%] border-l border-[#d6e0ea] px-5 py-4 text-center text-xs font-semibold uppercase tracking-normal text-[#416489]">
+                  Session Status
+                </th>
+                <th className="w-[25%] border-l border-[#d6e0ea] px-5 py-4 text-center text-xs font-semibold uppercase tracking-normal text-[#416489]">
+                  Session Duration
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#e3e8ee]">
+              {sessions.map((session, index) => (
+                <tr key={session.id} className={index % 2 === 1 ? 'bg-[#f6f9fc]' : 'bg-white'}>
+                  <td className="px-5 py-5 font-semibold text-[#08294f]">
+                    Session {index + 1}
+                  </td>
+                  <td className="border-l border-[#e3e8ee] px-5 py-5 font-semibold text-[#08294f]">
+                    {format(new Date(session.date), 'MMM d, yyyy, hh:mm a')}
+                  </td>
+                  <td className="border-l border-[#e3e8ee] px-5 py-5 text-center">
+                    <SessionStatusBadge completed={session.completed} />
+                  </td>
+                  <td className="border-l border-[#e3e8ee] px-5 py-5 text-center">
+                    <DurationPill durationMinutes={session.durationMinutes} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ProgressRing({ value }: { value: number }) {
+  const circumference = 2 * Math.PI * 29;
+  const dashOffset = circumference - (value / 100) * circumference;
+
+  return (
+    <div className="relative h-[76px] w-[76px] shrink-0">
+      <svg className="h-full w-full -rotate-90" viewBox="0 0 76 76" aria-hidden="true">
+        <circle cx="38" cy="38" r="29" fill="none" stroke="#e7edf3" strokeWidth="6" />
+        <circle
+          cx="38"
+          cy="38"
+          r="29"
+          fill="none"
+          stroke="#feb139"
+          strokeLinecap="round"
+          strokeWidth="6"
+          strokeDasharray={circumference}
+          strokeDashoffset={dashOffset}
+        />
+      </svg>
+      <span className="absolute inset-0 flex items-center justify-center text-sm font-bold text-[#08294f]">
+        {value}%
+      </span>
+    </div>
+  );
+}
+
+function SessionStatusBadge({ completed }: { completed: boolean }) {
+  return (
+    <Badge
+      className={
+        completed
+          ? 'min-w-[136px] justify-center rounded-full border border-green-200 bg-green-50 px-5 py-2 text-green-700 hover:bg-green-50'
+          : 'min-w-[136px] justify-center rounded-full border border-red-200 bg-red-50 px-5 py-2 text-red-600 hover:bg-red-50'
+      }
+    >
+      {completed ? 'Completed' : 'Cancelled'}
+    </Badge>
+  );
+}
+
+function DurationPill({ durationMinutes }: { durationMinutes: number }) {
+  return (
+    <span className="inline-flex min-w-[90px] items-center justify-center rounded-full border border-[#d6e0ea] bg-[#f1f6fb] px-4 py-2 font-semibold text-[#08294f]">
+      {formatSessionDuration(durationMinutes)}
+    </span>
+  );
+}
+
+function formatSessionDuration(durationMinutes: number) {
+  if (durationMinutes < 60) return `${durationMinutes} min`;
+
+  const hours = durationMinutes / 60;
+  if (Number.isInteger(hours)) return `${hours}hr`;
+
+  return `${hours.toFixed(1)}hrs`;
+}
+
+function SessionMetric({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="flex h-9 items-center gap-3 rounded-lg border border-[#d6e0ea] bg-white px-3 shadow-sm">
+      <span className="text-xs text-[#416489]">{label}</span>
+      <span className="text-sm font-bold text-[#08294f]">{value}%</span>
     </div>
   );
 }
@@ -557,14 +697,29 @@ function AssignmentBadge({
   }
 
   if (graded) {
-    return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Graded</Badge>;
+    return <Badge className="rounded-full border border-green-200 bg-green-50 px-3 py-1 text-green-700 hover:bg-green-50">Graded</Badge>;
   }
 
   if (submitted) {
-    return <Badge className="bg-amber-50 text-amber-700 hover:bg-amber-50 border border-amber-200">Submitted</Badge>;
+    return <Badge className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-amber-700 hover:bg-amber-50">Submitted</Badge>;
   }
 
-  return <Badge className="bg-red-50 text-red-600 hover:bg-red-50 border border-red-200">Pending</Badge>;
+  return <Badge className="rounded-full border border-red-200 bg-red-50 px-3 py-1 text-red-600 hover:bg-red-50">Pending</Badge>;
+}
+
+function ReportBadge({ done }: { done: boolean }) {
+  return (
+    <Badge
+      className={
+        done
+          ? 'gap-1.5 rounded-full border border-green-200 bg-green-50 px-3 py-1 text-green-700 hover:bg-green-50'
+          : 'rounded-full border border-red-200 bg-red-50 px-3 py-1 text-red-600 hover:bg-red-50'
+      }
+    >
+      {done && <CheckSquare className="h-3 w-3" />}
+      {done ? 'Done' : 'Pending'}
+    </Badge>
+  );
 }
 
 function getInitials(name: string) {
@@ -574,13 +729,4 @@ function getInitials(name: string) {
     .join('')
     .slice(0, 2)
     .toUpperCase();
-}
-
-function SectionTitle({ icon: Icon, title }: { icon: ElementType; title: string }) {
-  return (
-    <div className="mb-3 flex items-center gap-2 text-[#25476a]">
-      <Icon size={18} />
-      <p className="font-medium">{title}</p>
-    </div>
-  );
 }

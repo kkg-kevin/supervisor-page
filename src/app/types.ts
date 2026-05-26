@@ -1,4 +1,4 @@
-export type TeachingMethod = 'Physical Location' | 'Home Location' | 'Online';
+export type TeachingMethod = 'Center' | 'Home' | 'Physical' | 'Online' | 'Google Meet';
 export type PaymentType = 'Full' | 'Advance';
 export type ClaimStatus = 'Pending Review' | 'Approved' | 'Rejected';
 
@@ -70,4 +70,5 @@ export type ReviewAction = {
 
 export interface Filters {
   status: string;
+  search: string;
 }
