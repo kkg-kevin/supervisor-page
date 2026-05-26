@@ -1,388 +1,332 @@
-import { Claim } from '../types';
+import { useState, type ElementType } from 'react';
+import { CourseWithMentor, ReviewAction, Student } from '../types';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Progress } from './ui/progress';
 import { Textarea } from './ui/textarea';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from './ui/dialog';
+import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { format } from 'date-fns';
-import { isClaimValid, getValidationMessage, getEligibilityStatus } from '../utils/claimValidation';
 import {
-  Calendar,
-  FileText,
-  Eye,
-  ExternalLink,
-  TrendingUp,
-  Users,
-  BookOpen,
-  CheckCircle2,
+  getRemainingBalance,
+  getReviewMetrics,
+  getValidationMessage,
+  isClaimValid,
+} from '../utils/claimValidation';
+import {
   AlertCircle,
-  Send,
+  BookOpen,
+  Calendar,
+  CheckCircle2,
+  ClipboardCheck,
+  FileText,
+  MessageSquareText,
+  Users,
+  XCircle,
 } from 'lucide-react';
-import { useState } from 'react';
 
 interface ClaimDetailsProps {
-  claim: Claim | null;
-  onApproveClaim: (claimId: string) => void;
-  onRejectClaim: (claimId: string, reason: string) => void;
-  onMoveToFinance: (claimId: string) => void;
+  course: CourseWithMentor | null;
+  onReview: (action: ReviewAction) => void;
 }
 
-export function ClaimDetails({
-  claim,
-  onApproveClaim,
-  onRejectClaim,
-  onMoveToFinance,
-}: ClaimDetailsProps) {
+const getStatusColor = (status: string) => {
+  switch (status) {
+    case 'Pending Review':
+      return 'bg-[#feb139] text-white hover:bg-[#feb139]';
+    case 'Approved':
+      return 'bg-green-600 text-white hover:bg-green-600';
+    case 'Rejected':
+      return 'bg-red-500 text-white hover:bg-red-500';
+    default:
+      return 'bg-gray-500 text-white';
+  }
+};
+
+const metricColor = (value: number) => (value >= 90 ? 'text-green-700' : 'text-amber-700');
+
+export function ClaimDetails({ course, onReview }: ClaimDetailsProps) {
   const [rejectionReason, setRejectionReason] = useState('');
   const [showRejectionInput, setShowRejectionInput] = useState(false);
-  const [isEtimsPreviewOpen, setIsEtimsPreviewOpen] = useState(false);
 
-  if (!claim) {
+  if (!course) {
     return (
       <Card className="border-gray-200 h-full flex items-center justify-center">
         <CardContent className="text-center text-gray-500 py-12">
           <FileText size={48} className="mx-auto mb-4 text-gray-300" />
-          <p>Select a claim to view details</p>
+          <p>Select a claim to view mentor activity</p>
         </CardContent>
       </Card>
     );
   }
 
-  const isValid = isClaimValid(claim);
-  const validationMessage = getValidationMessage(claim);
-  const eligibility = getEligibilityStatus(claim);
+  const metrics = getReviewMetrics(course);
+  const validationMessage = getValidationMessage(course);
+  const canApprove = isClaimValid(course);
+  const remainingBalance = getRemainingBalance(course);
+
+  const presentFor = (sessionId: string, studentId: string) =>
+    course.attendance.find((mark) => mark.sessionId === sessionId && mark.studentId === studentId)
+      ?.present ?? false;
+
+  const studentSummary = (student: Student) => {
+    const attendanceMarks = course.attendance.filter((mark) => mark.studentId === student.id);
+    const present = attendanceMarks.filter((mark) => mark.present).length;
+    const issuedAssignments = course.assignments.filter((assignment) => assignment.issued);
+    const submitted = issuedAssignments.filter((assignment) =>
+      assignment.submittedStudentIds.includes(student.id)
+    ).length;
+    const reportsDone = course.reports.filter((report) => report.done).length;
+
+    return {
+      attendance: attendanceMarks.length === 0 ? 100 : Math.round((present / attendanceMarks.length) * 100),
+      assignment:
+        issuedAssignments.length === 0 ? 100 : Math.round((submitted / issuedAssignments.length) * 100),
+      report: course.reports.length === 0 ? 100 : Math.round((reportsDone / course.reports.length) * 100),
+    };
+  };
 
   const handleReject = () => {
-    if (showRejectionInput) {
-      if (rejectionReason.trim()) {
-        onRejectClaim(claim.id, rejectionReason);
-        setRejectionReason('');
-        setShowRejectionInput(false);
-      }
-    } else {
+    if (!showRejectionInput) {
       setShowRejectionInput(true);
+      return;
+    }
+
+    if (rejectionReason.trim()) {
+      onReview({ courseId: course.id, decision: 'rejected', comment: rejectionReason.trim() });
+      setRejectionReason('');
+      setShowRejectionInput(false);
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'Pending Review':
-        return 'bg-[#feb139] text-white hover:bg-[#feb139]';
-      case 'Approved':
-        return 'bg-[#38aae1] text-white hover:bg-[#38aae1]';
-      case 'Rejected':
-        return 'bg-red-500 text-white hover:bg-red-500';
-      case 'Moved to Finance':
-        return 'bg-green-600 text-white hover:bg-green-600';
-      default:
-        return 'bg-gray-500 text-white';
-    }
-  };
-
-  const openEtimsDocument = () => {
-    const documentHtml = `
-      <!doctype html>
-      <html lang="en">
-        <head>
-          <meta charset="utf-8" />
-          <meta name="viewport" content="width=device-width, initial-scale=1" />
-          <title>${claim.etimsDocument}</title>
-          <style>
-            body {
-              margin: 0;
-              background: #eef2f6;
-              color: #1f2937;
-              font-family: Arial, sans-serif;
-            }
-            main {
-              width: min(840px, calc(100% - 32px));
-              margin: 32px auto;
-              background: white;
-              border: 1px solid #d6dde6;
-              box-shadow: 0 20px 50px rgba(37, 71, 106, 0.18);
-            }
-            header {
-              background: #25476a;
-              color: white;
-              padding: 28px 36px;
-            }
-            section {
-              padding: 28px 36px;
-            }
-            h1, h2, p {
-              margin: 0;
-            }
-            h1 {
-              font-size: 24px;
-            }
-            h2 {
-              color: #25476a;
-              font-size: 16px;
-              margin-bottom: 14px;
-            }
-            .meta {
-              color: #bfdbfe;
-              margin-top: 8px;
-            }
-            .grid {
-              display: grid;
-              grid-template-columns: repeat(2, minmax(0, 1fr));
-              gap: 16px;
-            }
-            .field {
-              border-bottom: 1px solid #e5e7eb;
-              padding-bottom: 10px;
-            }
-            .label {
-              color: #6b7280;
-              font-size: 12px;
-              margin-bottom: 4px;
-            }
-            .value {
-              font-size: 15px;
-            }
-            .amount {
-              color: #25476a;
-              font-size: 28px;
-              font-weight: 700;
-            }
-            .stamp {
-              border: 2px solid #38aae1;
-              color: #25476a;
-              display: inline-block;
-              font-weight: 700;
-              letter-spacing: 1px;
-              margin-top: 20px;
-              padding: 10px 16px;
-            }
-          </style>
-        </head>
-        <body>
-          <main>
-            <header>
-              <h1>eTIMS Tax Invoice</h1>
-              <p class="meta">${claim.etimsDocument}</p>
-            </header>
-            <section>
-              <h2>Claim Summary</h2>
-              <div class="grid">
-                <div class="field">
-                  <p class="label">Mentor</p>
-                  <p class="value">${claim.mentorName}</p>
-                </div>
-                <div class="field">
-                  <p class="label">Course</p>
-                  <p class="value">${claim.courseName}</p>
-                </div>
-                <div class="field">
-                  <p class="label">Teaching Method</p>
-                  <p class="value">${claim.teachingMethod}</p>
-                </div>
-                <div class="field">
-                  <p class="label">Payment Type</p>
-                  <p class="value">${claim.paymentType}</p>
-                </div>
-                <div class="field">
-                  <p class="label">Submitted Date</p>
-                  <p class="value">${format(new Date(claim.submittedDate), 'MMM dd, yyyy')}</p>
-                </div>
-                <div class="field">
-                  <p class="label">Claim Status</p>
-                  <p class="value">${claim.status}</p>
-                </div>
-              </div>
-            </section>
-            <section>
-              <h2>Invoice Amount</h2>
-              <p class="amount">KES ${claim.amount.toLocaleString()}</p>
-              <p class="stamp">eTIMS DOCUMENT VERIFIED</p>
-            </section>
-          </main>
-        </body>
-      </html>
-    `;
-
-    const documentWindow = window.open('', '_blank', 'noopener,noreferrer');
-
-    if (documentWindow) {
-      documentWindow.document.write(documentHtml);
-      documentWindow.document.close();
-    }
+  const handleApprove = () => {
+    onReview({ courseId: course.id, decision: 'approved' });
+    setRejectionReason('');
+    setShowRejectionInput(false);
   };
 
   return (
-    <>
-      <Card className="border-gray-200">
-        <CardHeader className="bg-[#25476a] text-white">
-          <CardTitle className="flex items-center justify-between">
-            <span>Claim Details</span>
-            <Badge className={getStatusColor(claim.status)}>{claim.status}</Badge>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-6 space-y-6">
-        {/* Basic Information */}
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <p className="text-sm text-gray-600">Mentor Name</p>
-            <p className="mt-1">{claim.mentorName}</p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-600">Course Name</p>
-            <p className="mt-1">{claim.courseName}</p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-600">Teaching Method</p>
-            <p className="mt-1">{claim.teachingMethod}</p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-600">Payment Type</p>
-            <p className="mt-1">{claim.paymentType}</p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-600">Amount</p>
-            <p className="mt-1 text-lg" style={{ color: '#25476a' }}>
-              KES {claim.amount.toLocaleString()}
-            </p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-600">Submitted Date</p>
-            <p className="mt-1 flex items-center gap-2">
-              <Calendar size={16} className="text-gray-400" />
-              {format(new Date(claim.submittedDate), 'MMM dd, yyyy')}
-            </p>
-          </div>
-          <div className="col-span-2">
-            <p className="text-sm text-gray-600">eTIMS Document</p>
-            <div className="mt-2 flex flex-col gap-3 rounded-lg border border-gray-200 bg-gray-50 p-3 sm:flex-row sm:items-center sm:justify-between">
-              <p className="flex min-w-0 items-center gap-2 text-sm">
-                <FileText size={16} className="shrink-0 text-gray-400" />
-                <span className="truncate">{claim.etimsDocument}</span>
-              </p>
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsEtimsPreviewOpen(true)}
-                >
-                  <Eye className="mr-2 h-4 w-4" />
-                  Preview
-                </Button>
-                <Button type="button" size="sm" onClick={openEtimsDocument}>
-                  <ExternalLink className="mr-2 h-4 w-4" />
-                  View
-                </Button>
-              </div>
-            </div>
-          </div>
-          <div>
-            <p className="text-sm text-gray-600">Eligibility</p>
-            <Badge
-              className={`mt-1 ${
-                eligibility === 'Eligible'
-                  ? 'bg-green-100 text-green-800 hover:bg-green-100'
-                  : 'bg-red-100 text-red-800 hover:bg-red-100'
-              }`}
-            >
-              {eligibility}
-            </Badge>
-          </div>
-        </div>
+    <Card className="border-gray-200">
+      <CardHeader className="bg-[#25476a] text-white">
+        <CardTitle className="flex items-center justify-between gap-3">
+          <span>Course Review</span>
+          <Badge className={getStatusColor(course.claimStatus)}>{course.claimStatus}</Badge>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="p-6 space-y-6">
+        {!metrics.activityComplete && (
+          <Alert className="border-amber-200 bg-amber-50 text-amber-900">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Incomplete mentor activity</AlertTitle>
+            <AlertDescription>
+              Attendance, assignments, and reports must each reach 90% before approval.
+            </AlertDescription>
+          </Alert>
+        )}
 
-        {/* Course Progress */}
-        <div>
-          <p className="text-sm text-gray-600 mb-2">Course Progress</p>
-          <div className="flex items-center gap-3">
-            <Progress
-              value={claim.progress}
-              className="h-3 flex-1 bg-gray-200"
-              style={
-                {
-                  '--progress-background': '#38aae1',
-                } as React.CSSProperties
-              }
-            />
-            <span className="text-sm font-medium" style={{ color: '#38aae1' }}>
-              {claim.progress}%
-            </span>
+        <section>
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xl text-[#25476a]">{course.name}</p>
+              <p className="text-sm text-gray-600">{course.mentor.name}</p>
+            </div>
+            {course.submittedAt && (
+              <p className="flex items-center gap-2 text-sm text-gray-600">
+                <Calendar size={16} className="text-gray-400" />
+                {format(new Date(course.submittedAt), 'MMM dd, yyyy h:mm a')}
+              </p>
+            )}
           </div>
-          {validationMessage && (
-            <div className="mt-2 flex items-center gap-2 text-sm text-red-600">
-              <AlertCircle size={16} />
-              {validationMessage}
-            </div>
-          )}
-        </div>
 
-        {/* Course Activity Stats */}
-        <div>
-          <p className="text-sm text-gray-600 mb-3">Course Activity</p>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="p-3 bg-gray-50 rounded-lg">
-              <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
-                <BookOpen size={16} />
-                <span>Course Sessions</span>
-              </div>
-              <p className="text-lg" style={{ color: '#25476a' }}>
-                {claim.courseActivity.courseSessions.completed}/
-                {claim.courseActivity.courseSessions.total}
-              </p>
-            </div>
-            <div className="p-3 bg-gray-50 rounded-lg">
-              <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
-                <CheckCircle2 size={16} />
-                <span>Lesson Content</span>
-              </div>
-              <p className="text-lg" style={{ color: '#25476a' }}>
-                {claim.courseActivity.lessonContent.completed}/
-                {claim.courseActivity.lessonContent.total}
-              </p>
-            </div>
-            <div className="p-3 bg-gray-50 rounded-lg">
-              <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
-                <Users size={16} />
-                <span>Learner Attendance</span>
-              </div>
-              <p className="text-lg" style={{ color: '#25476a' }}>
-                {claim.courseActivity.learnerAttendance}%
-              </p>
-            </div>
-            <div className="p-3 bg-gray-50 rounded-lg">
-              <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
-                <TrendingUp size={16} />
-                <span>Report</span>
-              </div>
-              <p className="text-lg" style={{ color: '#25476a' }}>
-                {claim.courseActivity.report}%
-              </p>
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+            <SummaryTile label="Total Earnings" value={`KES ${course.totalEarnings.toLocaleString()}`} />
+            <SummaryTile label="Advance Claimed" value={`KES ${course.advanceClaimed.toLocaleString()}`} />
+            <SummaryTile label="Remaining Balance" value={`KES ${remainingBalance.toLocaleString()}`} />
+            <SummaryTile label="Claim Amount" value={`KES ${course.claimAmount.toLocaleString()}`} />
           </div>
-        </div>
+        </section>
 
-        {/* Rejection Reason (if rejected) */}
-        {claim.status === 'Rejected' && claim.rejectionReason && (
+        <section className="grid grid-cols-1 md:grid-cols-4 gap-3">
+          <MetricTile label="Completion" value={metrics.completionPercent} />
+          <MetricTile label="Attendance" value={metrics.attendancePercent} />
+          <MetricTile label="Assignments" value={metrics.assignmentsPercent} />
+          <MetricTile label="Reports" value={metrics.reportsPercent} />
+        </section>
+
+        {validationMessage && (
+          <p className="flex items-center gap-2 text-sm text-amber-700">
+            <AlertCircle size={16} />
+            {validationMessage}
+          </p>
+        )}
+
+        <section>
+          <SectionTitle icon={BookOpen} title="Sessions" />
+          <div className="overflow-x-auto rounded-lg border border-gray-200">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 text-gray-600">
+                <tr>
+                  <th className="px-3 py-2 text-left font-medium">Date</th>
+                  <th className="px-3 py-2 text-left font-medium">Duration</th>
+                  <th className="px-3 py-2 text-left font-medium">Completion</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {course.sessions.map((session) => (
+                  <tr key={session.id}>
+                    <td className="px-3 py-2">{format(new Date(session.date), 'MMM dd, yyyy')}</td>
+                    <td className="px-3 py-2">{session.durationMinutes} min</td>
+                    <td className="px-3 py-2">
+                      {session.completed ? (
+                        <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Complete</Badge>
+                      ) : (
+                        <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">Pending</Badge>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section>
+          <SectionTitle icon={Users} title="Attendance" />
+          <div className="overflow-x-auto rounded-lg border border-gray-200">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 text-gray-600">
+                <tr>
+                  <th className="px-3 py-2 text-left font-medium">Session</th>
+                  {course.students.map((student) => (
+                    <th key={student.id} className="px-3 py-2 text-center font-medium">
+                      {student.name}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {course.sessions.map((session) => (
+                  <tr key={session.id}>
+                    <td className="px-3 py-2">{format(new Date(session.date), 'MMM dd')}</td>
+                    {course.students.map((student) => (
+                      <td key={student.id} className="px-3 py-2 text-center">
+                        {presentFor(session.id, student.id) ? (
+                          <CheckCircle2 className="mx-auto h-4 w-4 text-green-600" />
+                        ) : (
+                          <XCircle className="mx-auto h-4 w-4 text-red-500" />
+                        )}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section>
+          <SectionTitle icon={ClipboardCheck} title="Assignments" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {course.assignments.map((assignment) => {
+              const ungraded = assignment.submittedStudentIds.length - assignment.gradedStudentIds.length;
+
+              return (
+                <div key={assignment.id} className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="font-medium">{assignment.title}</p>
+                    {ungraded > 0 && (
+                      <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">
+                        {ungraded} ungraded
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="mt-3 grid grid-cols-3 gap-2 text-sm text-gray-600">
+                    <p>Issued: {assignment.issued ? 'Yes' : 'No'}</p>
+                    <p>Submitted: {assignment.submittedStudentIds.length}/{course.students.length}</p>
+                    <p>Graded: {assignment.gradedStudentIds.length}/{course.students.length}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        <section>
+          <SectionTitle icon={MessageSquareText} title="Reports" />
+          <div className="space-y-3">
+            {course.reports.map((report) => (
+              <div key={report.id} className="rounded-lg border border-gray-200 p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="font-medium">{report.title}</p>
+                  <Badge
+                    className={
+                      report.done
+                        ? 'bg-green-100 text-green-800 hover:bg-green-100'
+                        : 'bg-amber-100 text-amber-800 hover:bg-amber-100'
+                    }
+                  >
+                    {report.done ? 'Done' : 'Pending'}
+                  </Badge>
+                </div>
+                <p className="mt-2 text-sm text-gray-600">
+                  {report.content ?? 'No report content submitted yet.'}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section>
+          <SectionTitle icon={Users} title="Students Summary" />
+          <div className="overflow-x-auto rounded-lg border border-gray-200">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 text-gray-600">
+                <tr>
+                  <th className="px-3 py-2 text-left font-medium">Student</th>
+                  <th className="px-3 py-2 text-left font-medium">Attendance</th>
+                  <th className="px-3 py-2 text-left font-medium">Assignment</th>
+                  <th className="px-3 py-2 text-left font-medium">Report</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {course.students.map((student) => {
+                  const summary = studentSummary(student);
+
+                  return (
+                    <tr key={student.id}>
+                      <td className="px-3 py-2">{student.name}</td>
+                      <td className={`px-3 py-2 ${metricColor(summary.attendance)}`}>
+                        {summary.attendance}%
+                      </td>
+                      <td className={`px-3 py-2 ${metricColor(summary.assignment)}`}>
+                        {summary.assignment}%
+                      </td>
+                      <td className={`px-3 py-2 ${metricColor(summary.report)}`}>
+                        {summary.report}%
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        {course.claimStatus === 'Rejected' && course.rejectionReason && (
           <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-            <p className="text-sm text-red-800 mb-1">Rejection Reason:</p>
-            <p className="text-sm text-red-900">{claim.rejectionReason}</p>
+            <p className="text-sm text-red-800 mb-1">Rejection Comment:</p>
+            <p className="text-sm text-red-900">{course.rejectionReason}</p>
           </div>
         )}
 
-        {/* Action Buttons */}
-        {claim.status === 'Pending Review' && (
+        {course.claimStatus === 'Pending Review' && (
           <div className="space-y-3 pt-4 border-t">
             {showRejectionInput ? (
               <div className="space-y-3">
                 <Textarea
-                  placeholder="Enter rejection reason..."
+                  placeholder="Enter rejection comment..."
                   value={rejectionReason}
-                  onChange={(e) => setRejectionReason(e.target.value)}
+                  onChange={(event) => setRejectionReason(event.target.value)}
                   className="min-h-[100px]"
                 />
                 <div className="flex gap-2">
@@ -406,111 +350,55 @@ export function ClaimDetails({
                 </div>
               </div>
             ) : (
-              <div className="flex gap-3">
+              <div className="flex flex-col gap-3 sm:flex-row">
                 <Button
-                  onClick={() => onApproveClaim(claim.id)}
-                  disabled={!isValid}
+                  onClick={handleApprove}
+                  disabled={!canApprove}
                   className="flex-1 hover:opacity-90"
-                  style={{
-                    backgroundColor: isValid ? '#38aae1' : undefined,
-                  }}
+                  style={{ backgroundColor: canApprove ? '#38aae1' : undefined }}
                 >
                   <CheckCircle2 className="mr-2 h-4 w-4" />
-                  Approve Claim
+                  Approve
                 </Button>
                 <Button onClick={handleReject} variant="destructive" className="flex-1">
                   <AlertCircle className="mr-2 h-4 w-4" />
-                  Reject Claim
+                  Reject
                 </Button>
               </div>
             )}
           </div>
         )}
+      </CardContent>
+    </Card>
+  );
+}
 
-        {claim.status === 'Approved' && (
-          <div className="pt-4 border-t">
-            <Button
-              onClick={() => onMoveToFinance(claim.id)}
-              className="w-full hover:opacity-90"
-              style={{ backgroundColor: '#25476a' }}
-            >
-              <Send className="mr-2 h-4 w-4" />
-              Move to Finance
-            </Button>
-          </div>
-        )}
-        </CardContent>
-      </Card>
+function SummaryTile({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+      <p className="text-xs text-gray-500">{label}</p>
+      <p className="mt-1 text-lg text-[#25476a]">{value}</p>
+    </div>
+  );
+}
 
-      <Dialog open={isEtimsPreviewOpen} onOpenChange={setIsEtimsPreviewOpen}>
-        <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-3xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5 text-[#25476a]" />
-              {claim.etimsDocument}
-            </DialogTitle>
-            <DialogDescription>
-              eTIMS document preview for {claim.mentorName}'s {claim.courseName} claim.
-            </DialogDescription>
-          </DialogHeader>
+function MetricTile({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-lg border border-gray-200 bg-white p-3">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-xs text-gray-500">{label}</p>
+        <p className={`text-sm font-medium ${metricColor(value)}`}>{value}%</p>
+      </div>
+      <Progress value={value} className="mt-2 h-2 bg-gray-200" />
+    </div>
+  );
+}
 
-          <div className="rounded-lg border border-gray-200 bg-gray-100 p-4">
-            <div className="mx-auto max-w-[620px] border border-gray-300 bg-white shadow-lg">
-              <div className="bg-[#25476a] px-6 py-5 text-white">
-                <p className="text-xl">eTIMS Tax Invoice</p>
-                <p className="mt-1 text-sm text-blue-200">{claim.etimsDocument}</p>
-              </div>
-
-              <div className="space-y-6 p-6">
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p className="text-gray-500">Mentor</p>
-                    <p className="mt-1">{claim.mentorName}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-500">Course</p>
-                    <p className="mt-1">{claim.courseName}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-500">Teaching Method</p>
-                    <p className="mt-1">{claim.teachingMethod}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-500">Payment Type</p>
-                    <p className="mt-1">{claim.paymentType}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-500">Submitted Date</p>
-                    <p className="mt-1">{format(new Date(claim.submittedDate), 'MMM dd, yyyy')}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-500">Claim Status</p>
-                    <p className="mt-1">{claim.status}</p>
-                  </div>
-                </div>
-
-                <div className="border-t border-gray-200 pt-5">
-                  <p className="text-sm text-gray-500">Invoice Amount</p>
-                  <p className="mt-1 text-3xl" style={{ color: '#25476a' }}>
-                    KES {claim.amount.toLocaleString()}
-                  </p>
-                </div>
-
-                <div className="inline-flex rounded border-2 border-[#38aae1] px-4 py-2 text-sm font-medium text-[#25476a]">
-                  eTIMS DOCUMENT VERIFIED
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex justify-end">
-            <Button type="button" onClick={openEtimsDocument}>
-              <ExternalLink className="mr-2 h-4 w-4" />
-              View Full Document
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </>
+function SectionTitle({ icon: Icon, title }: { icon: ElementType; title: string }) {
+  return (
+    <div className="mb-3 flex items-center gap-2 text-[#25476a]">
+      <Icon size={18} />
+      <p className="font-medium">{title}</p>
+    </div>
   );
 }

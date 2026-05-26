@@ -1,40 +1,25 @@
-import { Claim } from '../types';
+import { CourseWithMentor } from '../types';
 import { Card, CardContent } from './ui/card';
 import { FileText, CheckCircle, XCircle, DollarSign } from 'lucide-react';
 
 interface StatsOverviewProps {
-  claims: Claim[];
+  courses: CourseWithMentor[];
 }
 
-export function StatsOverview({ claims }: StatsOverviewProps) {
-  const pendingClaims = claims.filter((c) => c.status === 'Pending Review').length;
-  const approvedClaims = claims.filter((c) => c.status === 'Approved').length;
-  const rejectedClaims = claims.filter((c) => c.status === 'Rejected').length;
-  const totalValue = claims
-    .filter((c) => c.status === 'Pending Review' || c.status === 'Approved')
-    .reduce((sum, c) => sum + c.amount, 0);
+export function StatsOverview({ courses }: StatsOverviewProps) {
+  const pendingClaims = courses.filter((course) => course.claimStatus === 'Pending Review').length;
+  const approvedClaims = courses.filter((course) => course.claimStatus === 'Approved').length;
+  const rejectedClaims = courses.filter((course) => course.claimStatus === 'Rejected').length;
+  const totalValue = courses
+    .filter((course) => course.claimStatus !== 'Rejected')
+    .reduce((sum, course) => sum + course.claimAmount, 0);
 
   const stats = [
+    { title: 'Pending Claims', value: pendingClaims, icon: FileText, color: '#feb139' },
+    { title: 'Approved Claims', value: approvedClaims, icon: CheckCircle, color: '#38aae1' },
+    { title: 'Rejected Claims', value: rejectedClaims, icon: XCircle, color: '#ef4444' },
     {
-      title: 'Pending Claims',
-      value: pendingClaims,
-      icon: FileText,
-      color: '#feb139',
-    },
-    {
-      title: 'Approved Claims',
-      value: approvedClaims,
-      icon: CheckCircle,
-      color: '#38aae1',
-    },
-    {
-      title: 'Rejected Claims',
-      value: rejectedClaims,
-      icon: XCircle,
-      color: '#ef4444',
-    },
-    {
-      title: 'Total Claim Value',
+      title: 'Active Claim Value',
       value: `KES ${totalValue.toLocaleString()}`,
       icon: DollarSign,
       color: '#25476a',
@@ -43,8 +28,8 @@ export function StatsOverview({ claims }: StatsOverviewProps) {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-      {stats.map((stat, index) => (
-        <Card key={index} className="border-gray-200">
+      {stats.map((stat) => (
+        <Card key={stat.title} className="border-gray-200">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
