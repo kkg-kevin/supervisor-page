@@ -4,7 +4,7 @@ import { Badge } from './ui/badge';
 import { ScrollArea } from './ui/scroll-area';
 import { format } from 'date-fns';
 import { ArrowRight, BookOpen, Clock, User } from 'lucide-react';
-import { getReviewMetrics } from '../utils/claimValidation';
+import { getRequestedPayment, getReviewMetrics } from '../utils/claimValidation';
 
 interface CourseActivityTimelineProps {
   courses: CourseWithMentor[];
@@ -48,6 +48,7 @@ export function CourseActivityTimeline({
             {sortedCourses.map((course) => {
               const isSelected = course.id === selectedCourseId;
               const metrics = getReviewMetrics(course);
+              const requestedPayment = getRequestedPayment(course);
 
               return (
                 <div
@@ -113,7 +114,7 @@ export function CourseActivityTimeline({
                     <div className="flex items-center justify-between pt-2 border-t border-gray-100">
                       <span className="text-xs text-gray-500">{course.paymentType}</span>
                       <span className="text-sm" style={{ color: '#25476a' }}>
-                        KES {course.claimAmount.toLocaleString()}
+                        KES {requestedPayment.toLocaleString()}
                       </span>
                     </div>
                   </div>

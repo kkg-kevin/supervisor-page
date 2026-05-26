@@ -9,6 +9,9 @@ export type ReviewMetrics = {
 };
 
 const percent = (value: number, total: number) => (total === 0 ? 100 : Math.round((value / total) * 100));
+const CENTER_RATE_PER_HOUR = 904;
+const GOOGLE_MEET_RATE_PER_HOUR = 500;
+const ADVANCE_PERCENT = 0.3;
 
 export function getReviewMetrics(course: CourseWithMentor): ReviewMetrics {
   const completedSessions = course.sessions.filter((session) => session.completed).length;
@@ -37,8 +40,28 @@ export function getReviewMetrics(course: CourseWithMentor): ReviewMetrics {
   };
 }
 
+export function getHourlyRate(course: CourseWithMentor) {
+  return course.teachingMethod === 'Google Meet' ? GOOGLE_MEET_RATE_PER_HOUR : CENTER_RATE_PER_HOUR;
+}
+
+export function getAmountPayable(course: CourseWithMentor) {
+  const totalMinutes = course.sessions.reduce((total, session) => total + session.durationMinutes, 0);
+
+  return Math.round((totalMinutes / 60) * getHourlyRate(course));
+}
+
+export function getAdvancePayable(course: CourseWithMentor) {
+  return Math.round(getAmountPayable(course) * ADVANCE_PERCENT);
+}
+
+export function getRequestedPayment(course: CourseWithMentor) {
+  return course.paymentType === 'Advance' ? getAdvancePayable(course) : getAmountPayable(course);
+}
+
 export function getRemainingBalance(course: CourseWithMentor) {
-  return Math.max(course.totalEarnings - course.advanceClaimed, 0);
+  if (course.paymentType !== 'Advance') return 0;
+
+  return Math.max(getAmountPayable(course) - getAdvancePayable(course), 0);
 }
 
 export function isClaimValid(course: CourseWithMentor): boolean {

@@ -1,6 +1,7 @@
 import { CourseWithMentor } from '../types';
 import { Card, CardContent } from './ui/card';
 import { FileText, CheckCircle, XCircle, DollarSign } from 'lucide-react';
+import { getRequestedPayment } from '../utils/claimValidation';
 
 interface StatsOverviewProps {
   courses: CourseWithMentor[];
@@ -12,7 +13,7 @@ export function StatsOverview({ courses }: StatsOverviewProps) {
   const rejectedClaims = courses.filter((course) => course.claimStatus === 'Rejected').length;
   const totalValue = courses
     .filter((course) => course.claimStatus !== 'Rejected')
-    .reduce((sum, course) => sum + course.claimAmount, 0);
+    .reduce((sum, course) => sum + getRequestedPayment(course), 0);
 
   const stats = [
     { title: 'Pending Claims', value: pendingClaims, icon: FileText, color: '#feb139' },

@@ -1,5 +1,14 @@
 import { CourseWithMentor, TeachingMethod } from '../types';
+import { getRequestedPayment } from '../utils/claimValidation';
 import { Badge } from './ui/badge';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from './ui/table';
 import { format } from 'date-fns';
 import {
   BookOpen,
@@ -11,6 +20,7 @@ import {
   Home,
   Monitor,
   Palette,
+  MapPin,
 } from 'lucide-react';
 
 interface ClaimsListProps {
@@ -34,23 +44,35 @@ const getStatusColor = (status: string) => {
 
 const getMethodBadge = (method: TeachingMethod) => {
   switch (method) {
-    case 'Physical Location':
+    case 'Center':
       return {
         label: 'Center',
         icon: Building2,
         className: 'bg-[#25476a] text-white hover:bg-[#25476a]',
       };
-    case 'Home Location':
+    case 'Home':
       return {
         label: 'Home',
         icon: Home,
         className: 'bg-[#38aae1] text-white hover:bg-[#38aae1]',
+      };
+    case 'Physical':
+      return {
+        label: 'Physical',
+        icon: MapPin,
+        className: 'bg-violet-600 text-white hover:bg-violet-600',
       };
     case 'Online':
       return {
         label: 'Online',
         icon: Monitor,
         className: 'bg-emerald-600 text-white hover:bg-emerald-600',
+      };
+    case 'Google Meet':
+      return {
+        label: 'Google Meet',
+        icon: Monitor,
+        className: 'bg-rose-600 text-white hover:bg-rose-600',
       };
   }
 };
@@ -64,9 +86,12 @@ const getCourseIcon = (courseName: string) => {
 };
 
 const getLocation = (course: CourseWithMentor) => {
-  if (course.teachingMethod === 'Online') return 'Online - Virtual';
-  if (course.teachingMethod === 'Home Location') return "Student's Location";
-  return `${course.name} Learning Center`;
+  if (course.teachingMethod === 'Center') return `${course.name} Learning Center`;
+  if (course.teachingMethod === 'Home') return "Student's Location";
+  if (course.teachingMethod === 'Physical') return 'Physical Location';
+  if (course.teachingMethod === 'Online') return 'Online - Zoom';
+  if (course.teachingMethod === 'Google Meet') return 'Google Meet';
+  return course.teachingMethod;
 };
 
 export function ClaimsList({ courses, selectedCourseId, onSelectCourse }: ClaimsListProps) {
@@ -85,77 +110,103 @@ export function ClaimsList({ courses, selectedCourseId, onSelectCourse }: Claims
           No claims match the current filters
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 2xl:grid-cols-3">
-          {courses.map((course) => {
-            const isSelected = course.id === selectedCourseId;
-            const MethodIcon = getMethodBadge(course.teachingMethod).icon;
-            const CourseIcon = getCourseIcon(course.name);
-            const methodBadge = getMethodBadge(course.teachingMethod);
-            const completedSessions = course.sessions.filter((session) => session.completed).length;
+        <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
+          <Table className="min-w-[980px]">
+            <TableHeader className="bg-[#eaf2fa]">
+              <TableRow className="hover:bg-[#eaf2fa]">
+                <TableHead className="px-4 py-3 text-xs font-semibold uppercase text-[#25476a]">
+                  Course
+                </TableHead>
+                <TableHead className="px-4 py-3 text-xs font-semibold uppercase text-[#25476a]">
+                  Mentor
+                </TableHead>
+                <TableHead className="px-4 py-3 text-xs font-semibold uppercase text-[#25476a]">
+                  Method
+                </TableHead>
+                <TableHead className="px-4 py-3 text-xs font-semibold uppercase text-[#25476a]">
+                  Sessions
+                </TableHead>
+                <TableHead className="px-4 py-3 text-xs font-semibold uppercase text-[#25476a]">
+                  Claim
+                </TableHead>
+                <TableHead className="px-4 py-3 text-xs font-semibold uppercase text-[#25476a]">
+                  Submitted
+                </TableHead>
+                <TableHead className="px-4 py-3 text-xs font-semibold uppercase text-[#25476a]">
+                  Status
+                </TableHead>
+                <TableHead className="px-4 py-3 text-right text-xs font-semibold uppercase text-[#25476a]">
+                  View
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {courses.map((course) => {
+                const isSelected = course.id === selectedCourseId;
+                const MethodIcon = getMethodBadge(course.teachingMethod).icon;
+                const CourseIcon = getCourseIcon(course.name);
+                const methodBadge = getMethodBadge(course.teachingMethod);
+                const completedSessions = course.sessions.filter((session) => session.completed).length;
+                const requestedPayment = getRequestedPayment(course);
 
-            return (
-              <button
-                key={course.id}
-                type="button"
-                onClick={() => onSelectCourse(course.id)}
-                className={`group min-h-[238px] rounded-2xl border bg-white p-6 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md ${
-                  isSelected
-                    ? 'border-[#25476a] ring-2 ring-[#25476a]/15'
-                    : 'border-gray-200'
-                }`}
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex min-w-0 items-start gap-4">
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#eaf2fa] text-[#25476a]">
-                      <CourseIcon size={22} />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="truncate text-xl font-semibold text-gray-950">{course.name}</p>
-                      <p className="mt-1 truncate text-sm text-[#3f6389]">{getLocation(course)}</p>
-                    </div>
-                  </div>
-
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#eaf2fa] text-[#25476a] transition-colors group-hover:bg-[#d7e8f7]">
-                    <ChevronRight size={20} />
-                  </span>
-                </div>
-
-                <div className="mt-6 flex items-center justify-between gap-3 rounded-2xl bg-[#f3f7fb] p-3">
-                  <div className="flex min-w-0 items-center gap-3">
-                    <Badge className={`shrink-0 gap-1.5 rounded-full px-3 py-1 ${methodBadge.className}`}>
-                      <MethodIcon size={13} />
-                      {methodBadge.label}
-                    </Badge>
-                    <span className="truncate text-sm text-[#3f6389]">{course.mentor.name}</span>
-                  </div>
-                  <Badge className={`shrink-0 rounded-full px-3 py-1 ${getStatusColor(course.claimStatus)}`}>
-                    {course.claimStatus === 'Pending Review' ? 'Pending' : course.claimStatus}
-                  </Badge>
-                </div>
-
-                <div className="mt-6 grid grid-cols-3 gap-4">
-                  <div>
-                    <p className="text-xs font-semibold uppercase text-[#3f6389]">Sessions</p>
-                    <p className="mt-1 text-lg font-bold text-gray-950">
+                return (
+                  <TableRow
+                    key={course.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => onSelectCourse(course.id)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        onSelectCourse(course.id);
+                      }
+                    }}
+                    aria-label={`Open ${course.name} claim`}
+                    data-state={isSelected ? 'selected' : undefined}
+                    className="cursor-pointer bg-white hover:bg-[#f5f9fc]"
+                  >
+                    <TableCell className="px-4 py-4">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#eaf2fa] text-[#25476a]">
+                          <CourseIcon size={19} />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="truncate font-medium text-gray-950">{course.name}</p>
+                          <p className="truncate text-xs text-[#3f6389]">{getLocation(course)}</p>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="px-4 py-4 text-gray-700">{course.mentor.name}</TableCell>
+                    <TableCell className="px-4 py-4">
+                      <Badge className={`gap-1.5 rounded-full px-3 py-1 ${methodBadge.className}`}>
+                        <MethodIcon size={13} />
+                        {methodBadge.label}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="px-4 py-4 text-gray-700">
                       {completedSessions}/{course.sessions.length}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold uppercase text-[#3f6389]">Claim</p>
-                    <p className="mt-1 text-lg font-bold text-gray-950">
-                      KES {course.claimAmount.toLocaleString()}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold uppercase text-[#3f6389]">Submitted</p>
-                    <p className="mt-1 text-sm font-semibold text-gray-950">
-                      {course.submittedAt ? format(new Date(course.submittedAt), 'MMM dd') : '-'}
-                    </p>
-                  </div>
-                </div>
-              </button>
-            );
-          })}
+                    </TableCell>
+                    <TableCell className="px-4 py-4 font-medium text-gray-950">
+                      KES {requestedPayment.toLocaleString()}
+                    </TableCell>
+                    <TableCell className="px-4 py-4 text-gray-700">
+                      {course.submittedAt ? format(new Date(course.submittedAt), 'MMM dd, yyyy') : '-'}
+                    </TableCell>
+                    <TableCell className="px-4 py-4">
+                      <Badge className={`rounded-full px-3 py-1 ${getStatusColor(course.claimStatus)}`}>
+                        {course.claimStatus === 'Pending Review' ? 'Pending' : course.claimStatus}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="px-4 py-4 text-right">
+                      <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#eaf2fa] text-[#25476a]">
+                        <ChevronRight size={18} />
+                      </span>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
         </div>
       )}
     </div>
