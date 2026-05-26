@@ -1,31 +1,23 @@
-# Supervisor Payment Approval Dashboard
+# Mentor Activity Review and Claim Approval
 
-A React and Vite dashboard for supervisors to review, validate, approve, reject, and move mentor payment claims to finance. The interface helps supervisors inspect claim details, course activity, payment eligibility, and attached eTIMS documents before making a decision.
+A React, TypeScript, Vite, and Tailwind front-end prototype for supervisors to review mentor-submitted course claims. The page is designed as a read-only audit workflow: supervisors inspect the mentor's submitted activity, review the attached eTIMS payment reference, then approve or reject the claim.
 
 ## Overview
 
-This project is a front-end prototype for a supervisor payment approval workflow. It uses mock claim data to demonstrate how a supervisor can manage payment requests submitted by mentors across different courses, teaching methods, and payment types.
+The app models the supervisor side of a mentor claim process. Each course claim includes a mentor, payment summary, submitted date, eTIMS reference, sessions, attendance, assignments, reports, students, and review status.
 
-Original Figma design:
+Supervisors can:
 
-https://www.figma.com/design/bSPPnSxXleKj7LKsB5kmYf/Supervisor-Payment-Approval-Dashboard
+- View all submitted course claims as course cards
+- Filter claims by status
+- Open a full-page course claim review
+- Move through each session in a course
+- Inspect attendance, assignment, and report status per student for the selected session
+- Preview or view the mentor-submitted eTIMS reference
+- Approve eligible claims
+- Reject claims with a required comment
 
-## Features
-
-- Claims management table with mentor, course, teaching method, payment type, submission date, progress, status, amount, and eTIMS document details
-- Filtering by claim status, teaching method, payment type, mentor, and course
-- Claim details panel with full payment information and course activity metrics
-- Payment eligibility validation:
-  - Full payments require 100% course progress
-  - Advance payments require at least 30% course progress
-- Supervisor actions:
-  - Approve eligible pending claims
-  - Reject claims with a required rejection reason
-  - Move approved claims to finance
-- Activity timeline view for tracking claim progress and claim status
-- eTIMS document preview modal
-- Full eTIMS document view opened in a new browser tab/window
-- Responsive dashboard layout built with reusable UI components
+All data is mock data and all decisions are stored locally in React state.
 
 ## Tech Stack
 
@@ -33,7 +25,7 @@ https://www.figma.com/design/bSPPnSxXleKj7LKsB5kmYf/Supervisor-Payment-Approval-
 - TypeScript
 - Vite
 - Tailwind CSS
-- Radix UI components
+- shadcn/Radix UI components
 - Lucide React icons
 - date-fns
 
@@ -69,55 +61,208 @@ https://www.figma.com/design/bSPPnSxXleKj7LKsB5kmYf/Supervisor-Payment-Approval-
 
 ## Getting Started
 
-### Prerequisites
-
-Install Node.js and npm before running the project.
-
-Recommended:
-
-- Node.js 18 or newer
-- npm 9 or newer
-
-### Installation
-
-Clone the repository:
-
-```bash
-git clone https://github.com/kkg-kevin/supervisor-page.git
-cd supervisor-page
-```
-
 Install dependencies:
 
 ```bash
 npm install
 ```
 
-### Run Locally
-
-Start the development server:
+Start the local development server:
 
 ```bash
 npm run dev
 ```
 
-Vite will print a local URL in the terminal, usually:
+Vite will print a local URL, usually:
 
 ```text
 http://localhost:5173/
 ```
 
-Open that URL in your browser to use the dashboard.
-
-### Build for Production
-
-Create a production build:
+Build for production:
 
 ```bash
 npm run build
 ```
 
-The compiled output is generated in the `dist/` directory.
+The production output is generated in `dist/`.
+
+## Main Workflow
+
+1. The supervisor lands on the Mentor Activity Review dashboard.
+2. Course claims appear as cards with course name, mentor, claim amount, sessions, submission date, and status.
+3. The supervisor uses the status tabs to filter claims:
+   - All
+   - Pending
+   - Approved
+   - Rejected
+4. Clicking a course opens a full-page claim review.
+5. The supervisor reviews the claim summary and mentor activity.
+6. The supervisor uses the session arrows to move through each course session.
+7. For the selected session, the supervisor reviews every student in a table:
+   - Attendance
+   - Assignment
+   - Report
+8. The supervisor previews or views the attached eTIMS payment reference.
+9. The supervisor approves the claim or rejects it with a comment.
+
+## Claim Cards
+
+`src/app/components/ClaimsList.tsx` renders the supervisor claim cards.
+
+Each card shows:
+
+- Course name
+- Course location or delivery mode
+- Mentor name
+- Claim status
+- Completed sessions
+- Claim amount
+- Submitted date
+
+Clicking a card opens the full review page for that course claim.
+
+## Course Review Page
+
+`src/app/components/ClaimDetails.tsx` renders the full claim review page.
+
+The review page includes:
+
+- Back arrow to return to the claim cards
+- Claim status badge
+- Course name and mentor name
+- Submitted date
+- Total earnings
+- Advance claimed
+- Remaining balance
+- Claim amount
+- Completion, attendance, assignment, and report metrics
+- Session-by-session review table
+- eTIMS payment reference section
+- Approve and reject actions
+
+The mentor activity is read-only. Supervisors cannot edit sessions, attendance, assignments, reports, students, or eTIMS data.
+
+## Session Review
+
+The session review area lets the supervisor move from session to session with previous and next arrows.
+
+For the selected session, the table lists all students in that course and shows:
+
+- Student initials and name
+- Attendance as a read-only present/absent switch
+- Assignment status:
+  - Not issued
+  - Pending
+  - Submitted
+  - Graded
+- Report status:
+  - Done
+  - Pending
+
+The table is designed so a course with 6 students, or more, can show every student row for that session.
+
+## eTIMS Payment Reference
+
+Each course claim includes an `etimsDocument` value in the mock data.
+
+The supervisor can:
+
+- Preview the eTIMS reference in an in-app dialog
+- Open a full mock document view in a new browser tab/window
+
+The eTIMS section appears just above the approve/reject controls so the payment reference is reviewed before the final decision.
+
+## Validation Logic
+
+Validation lives in:
+
+```text
+src/app/utils/claimValidation.ts
+```
+
+The app computes:
+
+- Course completion percentage
+- Attendance percentage
+- Assignment grading percentage
+- Report completion percentage
+
+Rules:
+
+| Rule | Requirement |
+| --- | --- |
+| Attendance | Must be at least 90% |
+| Assignments | Must be at least 90% |
+| Reports | Must be at least 90% |
+| Full payment | Course completion must be 100% |
+| Advance payment | Course completion must be at least 30% |
+
+If a pending claim does not satisfy the validation rules, the approve button is disabled. The validation logic remains active even though the large incomplete-activity warning banner is not shown.
+
+## Mock Data
+
+Mock course claim data is defined in:
+
+```text
+src/app/data/mockClaims.ts
+```
+
+The primary exported dataset is:
+
+```ts
+INITIAL_COURSES
+```
+
+Each course claim includes:
+
+- Course details
+- Mentor details
+- Payment details
+- Claim status
+- Submitted date
+- eTIMS document filename
+- Students
+- Sessions
+- Attendance records
+- Assignments
+- Reports
+- Optional rejection reason
+
+## Types
+
+Core types live in:
+
+```text
+src/app/types.ts
+```
+
+Important types include:
+
+- `Course`
+- `Student`
+- `Session`
+- `Attendance`
+- `Assignment`
+- `Report`
+- `ClaimStatus`
+- `Mentor`
+- `CourseWithMentor`
+- `ReviewAction`
+
+## Local State
+
+The app has no backend. Review decisions are stored in React state inside `src/app/App.tsx`.
+
+Approving a claim changes its status to `Approved`.
+
+Rejecting a claim:
+
+- Requires a comment
+- Changes its status to `Rejected`
+- Stores the rejection comment on the course claim
+
+Refreshing the page resets decisions back to the mock data.
 
 ## Available Scripts
 
@@ -131,82 +276,17 @@ Starts the Vite development server.
 npm run build
 ```
 
-Builds the application for production.
-
-## Claim Workflow
-
-1. The supervisor opens the claims management dashboard.
-2. Claims can be filtered by status, teaching method, payment type, mentor, or course.
-3. Selecting a claim opens the details panel.
-4. The dashboard checks whether the claim is eligible for approval.
-5. The supervisor can preview or view the eTIMS document.
-6. If the claim is valid, the supervisor can approve it.
-7. If the claim is invalid or requires correction, the supervisor can reject it and provide a reason.
-8. Approved claims can be moved to finance.
-
-## Validation Rules
-
-The payment eligibility rules live in `src/app/utils/claimValidation.ts`.
-
-| Payment Type | Requirement |
-| --- | --- |
-| Full | Course progress must be 100% |
-| Advance | Course progress must be at least 30% |
-
-If a claim does not satisfy its rule, the approval button is disabled and the details panel displays the validation message.
-
-## Mock Data
-
-The app currently uses static mock data from:
-
-```text
-src/app/data/mockClaims.ts
-```
-
-Each claim includes:
-
-- Mentor name
-- Course name
-- Teaching method
-- Payment type
-- Submitted date
-- Claim progress
-- Claim status
-- Amount
-- eTIMS document filename
-- Course activity metrics
-- Optional rejection reason
-
-## eTIMS Documents
-
-The current implementation simulates eTIMS document handling using the claim data.
-
-- `Preview` opens an in-app modal with an eTIMS-style document preview.
-- `View` opens a full document-style page in a new browser tab/window.
-
-When real eTIMS files or a backend API are added, the `etimsDocument` field can be expanded into a file URL, storage key, or document metadata object.
-
-## Git and Repository Notes
-
-The repository includes a `.gitignore` configured for a Vite/React project. It excludes:
-
-- `node_modules/`
-- `dist/`
-- local environment files
-- logs
-- cache and coverage folders
-- editor and OS metadata
-
-`package-lock.json` is intentionally committed so installs are reproducible.
+Builds the app for production.
 
 ## Future Improvements
 
-- Connect claims to a backend API
-- Replace mock eTIMS previews with real uploaded PDF documents
+- Connect course claims to a backend API
+- Persist review decisions in a database
+- Replace mock eTIMS documents with real uploaded PDF files
 - Add authentication and supervisor roles
-- Persist claim status changes in a database
-- Add automated tests for validation and claim actions
-- Add deployment configuration for GitHub Pages, Vercel, Netlify, or another hosting platform
+- Add audit history for approval and rejection decisions
+- Add tests for validation and review actions
+- Add pagination or search for large claim volumes
 
 ## License
 
