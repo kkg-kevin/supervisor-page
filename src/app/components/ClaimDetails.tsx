@@ -60,6 +60,7 @@ export function ClaimDetails({ course, onReview, onBack }: ClaimDetailsProps) {
   const [showRejectionInput, setShowRejectionInput] = useState(false);
   const [selectedSessionIndex, setSelectedSessionIndex] = useState(0);
   const [isEtimsPreviewOpen, setIsEtimsPreviewOpen] = useState(false);
+  const [showApproveConfirm, setShowApproveConfirm] = useState(false);
 
   useEffect(() => {
     setSelectedSessionIndex(0);
@@ -137,6 +138,7 @@ export function ClaimDetails({ course, onReview, onBack }: ClaimDetailsProps) {
     onReview({ courseId: course.id, decision: 'approved' });
     setRejectionReason('');
     setShowRejectionInput(false);
+    setShowApproveConfirm(false);
   };
 
   const openEtimsDocument = () => {
@@ -229,6 +231,52 @@ export function ClaimDetails({ course, onReview, onBack }: ClaimDetailsProps) {
               </p>
             </div>
           </div>
+
+          <div className="flex flex-col items-end gap-2">
+            <div className="flex items-center gap-2">
+              {course.claimStatus === 'Pending Review' && (
+                <>
+                  <Button
+                    type="button"
+                    onClick={() => setShowApproveConfirm(true)}
+                    disabled={!canApprove}
+                    size="sm"
+                    className="px-3 py-1.5 text-sm font-medium shadow-sm"
+                    style={{ backgroundColor: canApprove ? '#38aae1' : undefined }}
+                  >
+                    <CheckCircle2 className="mr-2 h-4 w-4" />
+                    Approve
+                  </Button>
+
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    className="px-3 py-1.5 text-sm font-medium"
+                    onClick={() => setShowRejectionInput(true)}
+                  >
+                    <AlertCircle className="mr-2 h-4 w-4" />
+                    Reject
+                  </Button>
+                </>
+              )}
+            </div>
+
+            {course.etimsDocument && (
+              <div className="pt-1">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsEtimsPreviewOpen(true)}
+                  className="px-3 py-1 text-sm"
+                >
+                  <Eye className="mr-2 h-4 w-4" />
+                  Preview
+                </Button>
+              </div>
+            )}
+          </div>
         </div>
 
         <section className="rounded-2xl border border-[#d6e0ea] bg-white p-5 shadow-sm">
@@ -260,14 +308,8 @@ export function ClaimDetails({ course, onReview, onBack }: ClaimDetailsProps) {
                 KSh {requestedPayment.toLocaleString()}
               </p>
               <div className="mt-4 flex items-center justify-between border-t border-[#f3c65c] pt-3 text-xs">
-                <span className="text-[#d15d00]">
-                  {course.paymentType === 'Advance' ? 'Balance' : 'Rate'}
-                </span>
-                <span className="font-bold text-[#a33f00]">
-                  {course.paymentType === 'Advance'
-                    ? `KSh ${remainingBalance.toLocaleString()}`
-                    : `KSh ${hourlyRate.toLocaleString()}/hr`}
-                </span>
+                <span className="text-[#d15d00]">Balance Left</span>
+                <span className="font-bold text-[#a33f00]">KSh {Math.max(amountPayable - requestedPayment, 0).toLocaleString()}</span>
               </div>
             </div>
           </div>
@@ -418,79 +460,6 @@ export function ClaimDetails({ course, onReview, onBack }: ClaimDetailsProps) {
           </div>
         )}
 
-        <section className="rounded-lg border border-gray-200 bg-white p-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex min-w-0 items-center gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#eaf2fa] text-[#25476a]">
-                <FileText size={20} />
-              </div>
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-[#25476a]">eTIMS Payment Reference</p>
-                <p className="truncate text-sm text-gray-600">{course.etimsDocument}</p>
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <Button type="button" variant="outline" size="sm" onClick={() => setIsEtimsPreviewOpen(true)}>
-                <Eye className="mr-2 h-4 w-4" />
-                Preview
-              </Button>
-              <Button type="button" size="sm" onClick={openEtimsDocument}>
-                <ExternalLink className="mr-2 h-4 w-4" />
-                View
-              </Button>
-            </div>
-          </div>
-        </section>
-
-        {course.claimStatus === 'Pending Review' && (
-          <div className="space-y-3 rounded-lg border border-gray-200 bg-white p-4">
-            {showRejectionInput ? (
-              <div className="space-y-3">
-                <Textarea
-                  placeholder="Enter rejection comment..."
-                  value={rejectionReason}
-                  onChange={(event) => setRejectionReason(event.target.value)}
-                  className="min-h-[100px]"
-                />
-                <div className="flex gap-2">
-                  <Button
-                    onClick={handleReject}
-                    variant="destructive"
-                    disabled={!rejectionReason.trim()}
-                    className="flex-1"
-                  >
-                    Confirm Rejection
-                  </Button>
-                  <Button
-                    onClick={() => {
-                      setShowRejectionInput(false);
-                      setRejectionReason('');
-                    }}
-                    variant="outline"
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <Button
-                  onClick={handleApprove}
-                  disabled={!canApprove}
-                  className="flex-1 hover:opacity-90"
-                  style={{ backgroundColor: canApprove ? '#38aae1' : undefined }}
-                >
-                  <CheckCircle2 className="mr-2 h-4 w-4" />
-                  Approve
-                </Button>
-                <Button onClick={handleReject} variant="destructive" className="flex-1">
-                  <AlertCircle className="mr-2 h-4 w-4" />
-                  Reject
-                </Button>
-              </div>
-            )}
-          </div>
-        )}
       </div>
 
       <Dialog open={isEtimsPreviewOpen} onOpenChange={setIsEtimsPreviewOpen}>
@@ -548,6 +517,56 @@ export function ClaimDetails({ course, onReview, onBack }: ClaimDetailsProps) {
               <ExternalLink className="mr-2 h-4 w-4" />
               View Full Document
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showApproveConfirm} onOpenChange={setShowApproveConfirm}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Approve Claim</DialogTitle>
+            <DialogDescription>Are you sure you want to approve this claim? This will mark the claim as approved.</DialogDescription>
+          </DialogHeader>
+
+          <div className="mt-4 flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setShowApproveConfirm(false)}>
+              Cancel
+            </Button>
+            <Button onClick={() => handleApprove()} disabled={!canApprove}>
+              Confirm Approve
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showRejectionInput} onOpenChange={setShowRejectionInput}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Reject Claim</DialogTitle>
+            <DialogDescription>Provide a brief reason for rejecting this claim.</DialogDescription>
+          </DialogHeader>
+
+          <div className="mt-2">
+            <Textarea
+              placeholder="Enter rejection comment..."
+              value={rejectionReason}
+              onChange={(event) => setRejectionReason(event.target.value)}
+              className="min-h-[120px] w-full"
+            />
+            <div className="mt-4 flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowRejectionInput(false);
+                  setRejectionReason('');
+                }}
+              >
+                Cancel
+              </Button>
+              <Button variant="destructive" onClick={handleReject} disabled={!rejectionReason.trim()}>
+                Confirm Rejection
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
