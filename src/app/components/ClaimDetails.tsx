@@ -15,8 +15,6 @@ import { format } from 'date-fns';
 import {
   getAdvancePayable,
   getAmountPayable,
-  getHourlyRate,
-  getRemainingBalance,
   getRequestedPayment,
   getReviewMetrics,
   getValidationMessage,
@@ -25,13 +23,18 @@ import {
 import {
   AlertCircle,
   ArrowLeft,
+  Building2,
   CheckCircle2,
   CheckSquare,
   ChevronLeft,
   ChevronRight,
   ExternalLink,
-  FileText,
   Eye,
+  FileText,
+  Home,
+  MapPin,
+  Monitor,
+  Receipt,
 } from 'lucide-react';
 
 interface ClaimDetailsProps {
@@ -40,19 +43,6 @@ interface ClaimDetailsProps {
   onBack?: () => void;
 }
 
-const getStatusColor = (status: string) => {
-  switch (status) {
-    case 'Pending Review':
-      return 'bg-[#feb139] text-white hover:bg-[#feb139]';
-    case 'Approved':
-      return 'bg-green-600 text-white hover:bg-green-600';
-    case 'Rejected':
-      return 'bg-red-500 text-white hover:bg-red-500';
-    default:
-      return 'bg-gray-500 text-white';
-  }
-};
-
 const percent = (value: number, total: number) => (total === 0 ? 100 : Math.round((value / total) * 100));
 
 export function ClaimDetails({ course, onReview, onBack }: ClaimDetailsProps) {
@@ -60,6 +50,7 @@ export function ClaimDetails({ course, onReview, onBack }: ClaimDetailsProps) {
   const [showRejectionInput, setShowRejectionInput] = useState(false);
   const [selectedSessionIndex, setSelectedSessionIndex] = useState(0);
   const [isEtimsPreviewOpen, setIsEtimsPreviewOpen] = useState(false);
+  const [showApproveConfirm, setShowApproveConfirm] = useState(false);
 
   useEffect(() => {
     setSelectedSessionIndex(0);
@@ -69,8 +60,8 @@ export function ClaimDetails({ course, onReview, onBack }: ClaimDetailsProps) {
 
   if (!course) {
     return (
-      <Card className="border-gray-200 h-full flex items-center justify-center">
-        <CardContent className="text-center text-gray-500 py-12">
+      <Card className="flex h-full items-center justify-center border-gray-200">
+        <CardContent className="py-12 text-center text-gray-500">
           <FileText size={48} className="mx-auto mb-4 text-gray-300" />
           <p>Select a claim to view mentor activity</p>
         </CardContent>
@@ -84,13 +75,8 @@ export function ClaimDetails({ course, onReview, onBack }: ClaimDetailsProps) {
   const amountPayable = getAmountPayable(course);
   const advancePayable = getAdvancePayable(course);
   const requestedPayment = getRequestedPayment(course);
-  const remainingBalance = getRemainingBalance(course);
-  const hourlyRate = getHourlyRate(course);
   const isGoogleMeetClaim = course.teachingMethod === 'Google Meet';
-
-  const presentFor = (sessionId: string, studentId: string) =>
-    course.attendance.find((mark) => mark.sessionId === sessionId && mark.studentId === studentId)
-      ?.present ?? false;
+  const completedSessions = course.sessions.filter((session) => session.completed).length;
 
   const selectedSession = course.sessions[selectedSessionIndex] ?? course.sessions[0];
   const sessionAssignments = course.assignments.filter(
@@ -112,6 +98,10 @@ export function ClaimDetails({ course, onReview, onBack }: ClaimDetailsProps) {
   const completedSessionReports = sessionReports.filter((report) => report.done).length;
   const sessionReportPercent = percent(completedSessionReports, sessionReports.length);
 
+  const presentFor = (sessionId: string, studentId: string) =>
+    course.attendance.find((mark) => mark.sessionId === sessionId && mark.studentId === studentId)
+      ?.present ?? false;
+
   const goToPreviousSession = () => {
     setSelectedSessionIndex((current) => Math.max(current - 1, 0));
   };
@@ -121,11 +111,6 @@ export function ClaimDetails({ course, onReview, onBack }: ClaimDetailsProps) {
   };
 
   const handleReject = () => {
-    if (!showRejectionInput) {
-      setShowRejectionInput(true);
-      return;
-    }
-
     if (rejectionReason.trim()) {
       onReview({ courseId: course.id, decision: 'rejected', comment: rejectionReason.trim() });
       setRejectionReason('');
@@ -136,7 +121,7 @@ export function ClaimDetails({ course, onReview, onBack }: ClaimDetailsProps) {
   const handleApprove = () => {
     onReview({ courseId: course.id, decision: 'approved' });
     setRejectionReason('');
-    setShowRejectionInput(false);
+    setShowApproveConfirm(false);
   };
 
   const openEtimsDocument = () => {
@@ -204,293 +189,294 @@ export function ClaimDetails({ course, onReview, onBack }: ClaimDetailsProps) {
   return (
     <>
       <div className="space-y-5">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex min-w-0 items-center gap-3">
-            {onBack && (
+        <header className="flex items-center gap-4">
+          {onBack && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={onBack}
+              className="h-10 w-10 shrink-0 rounded-full text-[#25476a] hover:bg-white"
+              aria-label="Back to claims"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+          )}
+
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#25476a] text-white">
+            <CourseMethodIcon course={course} />
+          </div>
+
+          <div className="min-w-0">
+            <h1 className="truncate text-2xl font-bold leading-tight text-[#08294f]">{course.name}</h1>
+            <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-[#416489]">
+              <Badge className="gap-1 rounded-full bg-[#25476a] px-2 py-1 text-white hover:bg-[#25476a]">
+                <CourseMethodIcon course={course} small />
+                {course.teachingMethod}
+              </Badge>
+              <span>{getCourseLocation(course)}</span>
+            </div>
+          </div>
+        </header>
+
+        <section className="grid overflow-hidden rounded-2xl border border-[#d6e0ea] bg-white shadow-sm lg:grid-cols-[1.15fr_1.5fr_1.4fr]">
+          <div className="flex items-center gap-5 border-b border-[#d6e0ea] p-6 lg:border-b-0 lg:border-r">
+            <ProgressRing value={metrics.completionPercent} />
+            <div>
+              <p className="text-xs font-semibold uppercase text-[#416489]">Course Progress</p>
+              <p className="mt-2 text-base font-bold text-[#08294f]">
+                {completedSessions}/{course.sessions.length} sessions
+              </p>
+              <span className="mt-3 inline-flex rounded-full bg-[#eaf2fa] px-3 py-1 text-xs font-semibold text-[#25476a]">
+                {course.students.length} students
+              </span>
+            </div>
+          </div>
+
+          <div className="border-b border-[#d6e0ea] p-6 lg:border-b-0 lg:border-r">
+            <p className="text-xs font-semibold uppercase text-[#416489]">Amount Payable</p>
+            <p className="mt-2 text-3xl font-bold text-[#153e68]">KSh {amountPayable.toLocaleString()}</p>
+            <p className="mt-5 text-xs text-[#416489]">Advance payable</p>
+            <p className="mt-2 font-mono text-base font-bold text-[#d15d00]">
+              KSh {advancePayable.toLocaleString()}
+            </p>
+          </div>
+
+          <div className="p-6">
+            <p className="text-xs font-semibold uppercase text-[#416489]">Payment Actions</p>
+            <p className="mt-2 text-sm font-semibold text-[#08294f]">
+              Review the mentor payment claim and submitted activity.
+            </p>
+            <div className="mt-7 flex flex-col gap-3 sm:flex-row lg:flex-col xl:flex-row">
+              <Button
+                type="button"
+                onClick={() => setShowApproveConfirm(true)}
+                disabled={course.claimStatus !== 'Pending Review' || !canApprove}
+                className="h-11 flex-1 rounded-xl bg-[#25476a] font-bold text-white hover:bg-[#1d3a58]"
+              >
+                <CheckCircle2 className="mr-2 h-4 w-4" />
+                Approve Claim
+              </Button>
               <Button
                 type="button"
                 variant="outline"
-                size="icon"
-                onClick={onBack}
-                className="h-9 w-9 shrink-0"
-                aria-label="Back to claims"
+                disabled={course.claimStatus !== 'Pending Review'}
+                onClick={() => setShowRejectionInput(true)}
+                className="h-11 flex-1 rounded-xl border-[#d6e0ea] font-bold text-[#25476a]"
               >
-                <ArrowLeft className="h-5 w-5" />
+                <AlertCircle className="mr-2 h-4 w-4" />
+                Reject
               </Button>
-            )}
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <h2 className="truncate text-2xl font-semibold text-[#08294f]">{course.name}</h2>
-                <Badge className={getStatusColor(course.claimStatus)}>{course.claimStatus}</Badge>
-              </div>
-              <p className="text-sm text-[#416489]">
-                {course.mentor.name}
-                {course.submittedAt ? ` - Submitted ${format(new Date(course.submittedAt), 'MMM dd, yyyy h:mm a')}` : ''}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <section className="rounded-2xl border border-[#d6e0ea] bg-white p-5 shadow-sm">
-          <div className="grid gap-5 lg:grid-cols-[240px_1fr_1fr]">
-            <div className="flex items-center gap-4">
-              <ProgressRing value={metrics.completionPercent} />
-              <div>
-                <p className="text-sm text-[#315b87]">{isGoogleMeetClaim ? 'Sessions' : 'Students'}</p>
-                <p className="text-lg font-bold text-[#08294f]">
-                  {isGoogleMeetClaim ? course.sessions.length : course.students.length}
-                </p>
-              </div>
-            </div>
-
-            <div className="rounded-xl border border-[#d3e1ee] bg-[#f8fbff] p-4">
-              <p className="text-xs text-[#315b87]">Amount Payable</p>
-              <p className="mt-1 text-xl font-bold text-[#08294f]">
-                KSh {amountPayable.toLocaleString()}
-              </p>
-              <div className="mt-4 flex items-center justify-between border-t border-[#dbe5ef] pt-3 text-xs">
-                <span className="text-[#315b87]">Advance Payable</span>
-                <span className="font-bold text-[#c65300]">KSh {advancePayable.toLocaleString()}</span>
-              </div>
-            </div>
-
-            <div className="rounded-xl border border-[#f7c456] bg-[#fff9e8] p-4">
-              <p className="text-xs text-[#d15d00]">Requested Payment</p>
-              <p className="mt-1 text-xl font-bold text-[#d15d00]">
-                KSh {requestedPayment.toLocaleString()}
-              </p>
-              <div className="mt-4 flex items-center justify-between border-t border-[#f3c65c] pt-3 text-xs">
-                <span className="text-[#d15d00]">
-                  {course.paymentType === 'Advance' ? 'Balance' : 'Rate'}
-                </span>
-                <span className="font-bold text-[#a33f00]">
-                  {course.paymentType === 'Advance'
-                    ? `KSh ${remainingBalance.toLocaleString()}`
-                    : `KSh ${hourlyRate.toLocaleString()}/hr`}
-                </span>
-              </div>
             </div>
           </div>
         </section>
 
         {validationMessage && (
-          <p className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+          <p className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
             <AlertCircle size={16} />
             {validationMessage}
           </p>
         )}
 
-        {isGoogleMeetClaim ? (
-          <GoogleMeetSessionTable sessions={course.sessions} />
-        ) : (
-        <section>
-          <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex flex-col gap-3 md:flex-row md:items-center">
-              <div className="mr-1">
-                <p className="text-lg font-bold text-[#08294f]">Session {selectedSessionIndex + 1}</p>
-                <p className="text-sm text-[#416489]">
-                  {format(new Date(selectedSession.date), 'yyyy-MM-dd')}
-                </p>
-              </div>
-              <SessionMetric label="Attendance" value={sessionAttendancePercent} />
-              <SessionMetric label="Assignment" value={sessionAssignmentPercent} />
-              <SessionMetric label="Report" value={sessionReportPercent} />
-            </div>
-
-            <div className="flex items-center gap-5 self-start text-[#416489] lg:self-auto">
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={goToPreviousSession}
-                disabled={selectedSessionIndex === 0}
-                className="h-8 w-8 text-[#8cadca] hover:bg-white hover:text-[#25476a]"
-                aria-label="Previous session"
-              >
-                <ChevronLeft className="h-5 w-5" />
-              </Button>
-              <span className="min-w-14 text-center text-sm">
-                {selectedSessionIndex + 1} / {course.sessions.length}
-              </span>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={goToNextSession}
-                disabled={selectedSessionIndex === course.sessions.length - 1}
-                className="h-8 w-8 text-[#416489] hover:bg-white hover:text-[#25476a]"
-                aria-label="Next session"
-              >
-                <ChevronRight className="h-5 w-5" />
-              </Button>
-            </div>
-          </div>
-
-          <div className="overflow-hidden rounded-2xl border border-[#d6e0ea] bg-white">
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[920px] text-sm">
-                <thead className="bg-[#eaf2fa] text-[#08294f]">
-                  <tr>
-                    <th className="w-[40%] px-4 py-4 text-left text-xs font-semibold uppercase tracking-normal text-[#416489]">
-                      Student
-                    </th>
-                    <th className="w-[19%] border-l border-[#d6e0ea] px-4 py-4 text-center text-xs font-semibold uppercase tracking-normal">
-                      Attendance
-                    </th>
-                    <th className="w-[24%] border-l border-[#d6e0ea] px-4 py-4 text-center text-base font-semibold uppercase tracking-normal">
-                      Assignment
-                    </th>
-                    <th className="w-[17%] border-l border-[#d6e0ea] px-4 py-4 text-center text-base font-semibold uppercase tracking-normal">
-                      Report
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#e3e8ee]">
-                  {course.students.map((student) => {
-                    const isPresent = presentFor(selectedSession.id, student.id);
-                    const reportDone =
-                      sessionReports.length > 0 && sessionReports.every((report) => report.done);
-
-                    return (
-                      <tr key={student.id} className="bg-white">
-                        <td className="px-4 py-5">
-                          <div className="flex items-center gap-3">
-                            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#153e68] text-xs font-semibold text-white">
-                              {getInitials(student.name)}
-                            </span>
-                            <span className="font-semibold text-[#08294f]">{student.name}</span>
-                          </div>
-                        </td>
-                        <td className="border-l border-[#e3e8ee] px-4 py-5 text-center">
-                          <div className="flex flex-col items-center gap-1">
-                            <span
-                              className={`relative h-7 w-14 rounded-full ${
-                                isPresent ? 'bg-[#06c167]' : 'bg-red-400'
-                              }`}
-                              aria-label={isPresent ? 'Present' : 'Absent'}
-                            >
-                              <span
-                                className={`absolute top-1 h-5 w-5 rounded-full bg-white transition-transform ${
-                                  isPresent ? 'right-1' : 'left-1'
-                                }`}
-                              />
-                            </span>
-                            <span className={isPresent ? 'text-xs font-semibold text-[#009b52]' : 'text-xs font-semibold text-red-600'}>
-                              {isPresent ? 'Present' : 'Absent'}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="border-l border-[#e3e8ee] px-4 py-5">
-                          <div className="flex flex-wrap justify-center gap-2">
-                            {sessionAssignments.length === 0 ? (
-                              <Badge className="rounded-full bg-gray-100 px-3 py-1 text-gray-700 hover:bg-gray-100">
-                                Not issued
-                              </Badge>
-                            ) : (
-                              sessionAssignments.map((assignment) => (
-                                <AssignmentBadge
-                                  key={assignment.id}
-                                  issued={assignment.issued}
-                                  submitted={assignment.submittedStudentIds.includes(student.id)}
-                                  graded={assignment.gradedStudentIds.includes(student.id)}
-                                />
-                              ))
-                            )}
-                          </div>
-                        </td>
-                        <td className="border-l border-[#e3e8ee] px-4 py-5 text-center">
-                          <ReportBadge done={reportDone} />
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </section>
-        )}
-
-        {course.claimStatus === 'Rejected' && course.rejectionReason && (
-          <div className="rounded-lg border border-red-200 bg-red-50 p-4">
-            <p className="mb-1 text-sm text-red-800">Rejection Comment:</p>
-            <p className="text-sm text-red-900">{course.rejectionReason}</p>
-          </div>
-        )}
-
-        <section className="rounded-lg border border-gray-200 bg-white p-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex min-w-0 items-center gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#eaf2fa] text-[#25476a]">
-                <FileText size={20} />
-              </div>
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-[#25476a]">eTIMS Payment Reference</p>
-                <p className="truncate text-sm text-gray-600">{course.etimsDocument}</p>
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <Button type="button" variant="outline" size="sm" onClick={() => setIsEtimsPreviewOpen(true)}>
-                <Eye className="mr-2 h-4 w-4" />
-                Preview
-              </Button>
-              <Button type="button" size="sm" onClick={openEtimsDocument}>
-                <ExternalLink className="mr-2 h-4 w-4" />
-                View
-              </Button>
-            </div>
-          </div>
-        </section>
-
-        {course.claimStatus === 'Pending Review' && (
-          <div className="space-y-3 rounded-lg border border-gray-200 bg-white p-4">
-            {showRejectionInput ? (
-              <div className="space-y-3">
-                <Textarea
-                  placeholder="Enter rejection comment..."
-                  value={rejectionReason}
-                  onChange={(event) => setRejectionReason(event.target.value)}
-                  className="min-h-[100px]"
-                />
-                <div className="flex gap-2">
-                  <Button
-                    onClick={handleReject}
-                    variant="destructive"
-                    disabled={!rejectionReason.trim()}
-                    className="flex-1"
-                  >
-                    Confirm Rejection
-                  </Button>
-                  <Button
-                    onClick={() => {
-                      setShowRejectionInput(false);
-                      setRejectionReason('');
-                    }}
-                    variant="outline"
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              </div>
+        <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(360px,0.92fr)]">
+          <div className="overflow-hidden rounded-2xl border border-[#d6e0ea] bg-white shadow-sm">
+            {isGoogleMeetClaim ? (
+              <GoogleMeetSessionTable sessions={course.sessions} />
             ) : (
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <Button
-                  onClick={handleApprove}
-                  disabled={!canApprove}
-                  className="flex-1 hover:opacity-90"
-                  style={{ backgroundColor: canApprove ? '#38aae1' : undefined }}
-                >
-                  <CheckCircle2 className="mr-2 h-4 w-4" />
-                  Approve
-                </Button>
-                <Button onClick={handleReject} variant="destructive" className="flex-1">
-                  <AlertCircle className="mr-2 h-4 w-4" />
-                  Reject
-                </Button>
-              </div>
+              <>
+                <div className="flex flex-col gap-4 border-b border-[#d6e0ea] bg-[#f8fbff] p-5 lg:flex-row lg:items-center lg:justify-between">
+                  <div className="flex flex-col gap-3 md:flex-row md:items-center">
+                    <div className="mr-1 min-w-[120px]">
+                      <p className="text-xl font-bold text-[#08294f]">Session {selectedSessionIndex + 1}</p>
+                      <p className="text-sm text-[#416489]">
+                        {format(new Date(selectedSession.date), 'yyyy-MM-dd')}
+                      </p>
+                    </div>
+                    <SessionMetric label="Attendance" value={sessionAttendancePercent} />
+                    <SessionMetric label="Assignment" value={sessionAssignmentPercent} />
+                    <SessionMetric label="Report" value={sessionReportPercent} />
+                  </div>
+
+                  <div className="flex items-center gap-5 self-start text-[#416489] lg:self-auto">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={goToPreviousSession}
+                      disabled={selectedSessionIndex === 0}
+                      className="h-8 w-8 text-[#8cadca] hover:bg-white hover:text-[#25476a]"
+                      aria-label="Previous session"
+                    >
+                      <ChevronLeft className="h-5 w-5" />
+                    </Button>
+                    <span className="min-w-14 text-center text-sm">
+                      {selectedSessionIndex + 1} / {course.sessions.length}
+                    </span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={goToNextSession}
+                      disabled={selectedSessionIndex === course.sessions.length - 1}
+                      className="h-8 w-8 text-[#416489] hover:bg-white hover:text-[#25476a]"
+                      aria-label="Next session"
+                    >
+                      <ChevronRight className="h-5 w-5" />
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[700px] text-sm">
+                    <thead className="bg-[#eaf2fa] text-[#08294f]">
+                      <tr>
+                        <th className="w-[40%] px-4 py-4 text-left text-xs font-semibold uppercase text-[#416489]">
+                          Student
+                        </th>
+                        <th className="w-[19%] border-l border-[#d6e0ea] px-4 py-4 text-center text-xs font-semibold uppercase text-[#416489]">
+                          Attendance
+                        </th>
+                        <th className="w-[24%] border-l border-[#d6e0ea] px-4 py-4 text-center text-base font-semibold uppercase">
+                          Assignment
+                        </th>
+                        <th className="w-[17%] border-l border-[#d6e0ea] px-4 py-4 text-center text-base font-semibold uppercase">
+                          Report
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#e3e8ee]">
+                      {course.students.map((student) => {
+                        const isPresent = presentFor(selectedSession.id, student.id);
+                        const reportDone =
+                          sessionReports.length > 0 && sessionReports.every((report) => report.done);
+
+                        return (
+                          <tr key={student.id} className="bg-white">
+                            <td className="px-4 py-5">
+                              <div className="flex items-center gap-3">
+                                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#153e68] text-xs font-bold text-white">
+                                  {getInitials(student.name)}
+                                </span>
+                                <span className="font-semibold text-[#08294f]">{student.name}</span>
+                              </div>
+                            </td>
+                            <td className="border-l border-[#e3e8ee] px-4 py-5 text-center">
+                              <div className="flex flex-col items-center gap-1">
+                                <span
+                                  className={`relative h-7 w-14 rounded-full ${
+                                    isPresent ? 'bg-[#06c167]' : 'bg-red-400'
+                                  }`}
+                                  aria-label={isPresent ? 'Present' : 'Absent'}
+                                >
+                                  <span
+                                    className={`absolute top-1 h-5 w-5 rounded-full bg-white ${
+                                      isPresent ? 'right-1' : 'left-1'
+                                    }`}
+                                  />
+                                </span>
+                                <span
+                                  className={
+                                    isPresent
+                                      ? 'text-xs font-semibold text-[#009b52]'
+                                      : 'text-xs font-semibold text-red-600'
+                                  }
+                                >
+                                  {isPresent ? 'Present' : 'Absent'}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="border-l border-[#e3e8ee] px-4 py-5">
+                              <div className="flex flex-wrap justify-center gap-2">
+                                {sessionAssignments.length === 0 ? (
+                                  <Badge className="rounded-full bg-gray-100 px-3 py-1 text-gray-700 hover:bg-gray-100">
+                                    Not issued
+                                  </Badge>
+                                ) : (
+                                  sessionAssignments.map((assignment) => (
+                                    <AssignmentBadge
+                                      key={assignment.id}
+                                      issued={assignment.issued}
+                                      submitted={assignment.submittedStudentIds.includes(student.id)}
+                                      graded={assignment.gradedStudentIds.includes(student.id)}
+                                    />
+                                  ))
+                                )}
+                              </div>
+                            </td>
+                            <td className="border-l border-[#e3e8ee] px-4 py-5 text-center">
+                              <ReportBadge done={reportDone} />
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
           </div>
-        )}
+
+          <aside className="min-h-[420px] rounded-2xl border border-[#d6e0ea] bg-white p-5 shadow-sm">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-bold text-[#08294f]">Claim History</h2>
+                <p className="mt-1 text-sm text-[#416489]">{course.name}</p>
+              </div>
+              <span className="flex h-7 min-w-7 items-center justify-center rounded-full border border-[#d6e0ea] bg-[#f4f8fb] px-2 text-xs font-semibold text-[#25476a]">
+                1
+              </span>
+            </div>
+
+            <div className="mt-5 rounded-2xl border border-[#d6e0ea] p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="font-bold text-[#08294f]">Payment claim</h3>
+                  <p className="mt-2 text-xs text-[#416489]">
+                    {course.submittedAt
+                      ? format(new Date(course.submittedAt), 'MMM dd, yyyy, h:mm a')
+                      : 'Not submitted'}
+                  </p>
+                </div>
+                <Badge className={getClaimBadgeClass(course.claimStatus)}>
+                  {course.claimStatus === 'Pending Review' ? 'Requested' : course.claimStatus}
+                </Badge>
+              </div>
+
+              <div className="mt-4 flex items-center justify-between rounded-xl bg-[#f8fbff] px-3 py-3">
+                <span className="text-sm text-[#416489]">Amount</span>
+                <span className="font-mono text-sm font-bold text-[#153e68]">
+                  KSh {requestedPayment.toLocaleString()}
+                </span>
+              </div>
+
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-sm">
+                <p className="text-[#416489]">
+                  Invoice: <span className="font-semibold text-[#08294f]">{course.etimsDocument}</span>
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsEtimsPreviewOpen(true)}
+                  className="h-8 rounded-full border-[#d6e0ea] text-[#25476a]"
+                >
+                  <Eye className="mr-2 h-4 w-4" />
+                  Preview
+                </Button>
+              </div>
+
+              <div className="mt-4 rounded-xl border border-[#d6e0ea] bg-[#f8fbff] px-3 py-3">
+                <p className="text-xs font-bold uppercase text-[#416489]">Note</p>
+                <p className="mt-1 text-sm text-[#416489]">
+                  {course.paymentType === 'Full' ? 'Full course payment' : 'Advance payment claim'}
+                </p>
+                {course.claimStatus === 'Rejected' && course.rejectionReason && (
+                  <p className="mt-3 text-sm text-red-700">{course.rejectionReason}</p>
+                )}
+              </div>
+            </div>
+          </aside>
+        </section>
       </div>
 
       <Dialog open={isEtimsPreviewOpen} onOpenChange={setIsEtimsPreviewOpen}>
@@ -531,9 +517,7 @@ export function ClaimDetails({ course, onReview, onBack }: ClaimDetailsProps) {
 
                 <div className="border-t border-gray-200 pt-5">
                   <p className="text-sm text-gray-500">Claim Amount</p>
-                  <p className="mt-1 text-3xl" style={{ color: '#25476a' }}>
-                    KES {requestedPayment.toLocaleString()}
-                  </p>
+                  <p className="mt-1 text-3xl text-[#25476a]">KES {requestedPayment.toLocaleString()}</p>
                 </div>
 
                 <div className="inline-flex rounded border-2 border-[#38aae1] px-4 py-2 text-sm font-medium text-[#25476a]">
@@ -551,8 +535,91 @@ export function ClaimDetails({ course, onReview, onBack }: ClaimDetailsProps) {
           </div>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={showApproveConfirm} onOpenChange={setShowApproveConfirm}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Approve Claim</DialogTitle>
+            <DialogDescription>This will mark the mentor payment claim as approved.</DialogDescription>
+          </DialogHeader>
+
+          <div className="mt-4 flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setShowApproveConfirm(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleApprove} disabled={!canApprove}>
+              Confirm Approve
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showRejectionInput} onOpenChange={setShowRejectionInput}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Reject Claim</DialogTitle>
+            <DialogDescription>Provide a brief reason for rejecting this claim.</DialogDescription>
+          </DialogHeader>
+
+          <div className="mt-2">
+            <Textarea
+              placeholder="Enter rejection comment..."
+              value={rejectionReason}
+              onChange={(event) => setRejectionReason(event.target.value)}
+              className="min-h-[120px] w-full"
+            />
+            <div className="mt-4 flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowRejectionInput(false);
+                  setRejectionReason('');
+                }}
+              >
+                Cancel
+              </Button>
+              <Button variant="destructive" onClick={handleReject} disabled={!rejectionReason.trim()}>
+                Confirm Rejection
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
+}
+
+function CourseMethodIcon({ course, small = false }: { course: CourseWithMentor; small?: boolean }) {
+  const className = small ? 'h-3 w-3' : 'h-5 w-5';
+
+  if (course.teachingMethod === 'Center') return <Building2 className={className} />;
+  if (course.teachingMethod === 'Home') return <Home className={className} />;
+  if (course.teachingMethod === 'Physical') return <MapPin className={className} />;
+  if (course.teachingMethod === 'Google Meet' || course.teachingMethod === 'Online') {
+    return <Monitor className={className} />;
+  }
+
+  return <Receipt className={className} />;
+}
+
+function getCourseLocation(course: CourseWithMentor) {
+  if (course.teachingMethod === 'Center') return `${course.name} Learning Center`;
+  if (course.teachingMethod === 'Home') return "Student's Location";
+  if (course.teachingMethod === 'Physical') return 'Physical Location';
+  if (course.teachingMethod === 'Online') return 'Online - Zoom';
+  return 'Google Meet';
+}
+
+function getClaimBadgeClass(status: CourseWithMentor['claimStatus']) {
+  if (status === 'Approved') {
+    return 'rounded-full border border-green-200 bg-green-50 px-3 py-1 text-green-700 hover:bg-green-50';
+  }
+
+  if (status === 'Rejected') {
+    return 'rounded-full border border-red-200 bg-red-50 px-3 py-1 text-red-600 hover:bg-red-50';
+  }
+
+  return 'rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-blue-700 hover:bg-blue-50';
 }
 
 function PreviewField({ label, value }: { label: string; value: string }) {
@@ -566,53 +633,49 @@ function PreviewField({ label, value }: { label: string; value: string }) {
 
 function GoogleMeetSessionTable({ sessions }: { sessions: Session[] }) {
   return (
-    <section>
-      <div className="mb-5">
-        <p className="text-lg font-bold text-[#08294f]">Google Meet Sessions</p>
+    <>
+      <div className="border-b border-[#d6e0ea] bg-[#f8fbff] p-5">
+        <p className="text-xl font-bold text-[#08294f]">Google Meet Sessions</p>
         <p className="text-sm text-[#416489]">Scheduled session review</p>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-[#d6e0ea] bg-white">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[920px] text-sm">
-            <thead className="bg-[#eaf2fa] text-[#08294f]">
-              <tr>
-                <th className="w-[18%] px-5 py-4 text-left text-xs font-semibold uppercase tracking-normal text-[#416489]">
-                  Session
-                </th>
-                <th className="w-[32%] border-l border-[#d6e0ea] px-5 py-4 text-left text-xs font-semibold uppercase tracking-normal text-[#416489]">
-                  Session Scheduled
-                </th>
-                <th className="w-[25%] border-l border-[#d6e0ea] px-5 py-4 text-center text-xs font-semibold uppercase tracking-normal text-[#416489]">
-                  Session Status
-                </th>
-                <th className="w-[25%] border-l border-[#d6e0ea] px-5 py-4 text-center text-xs font-semibold uppercase tracking-normal text-[#416489]">
-                  Session Duration
-                </th>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[760px] text-sm">
+          <thead className="bg-[#eaf2fa] text-[#08294f]">
+            <tr>
+              <th className="w-[18%] px-5 py-4 text-left text-xs font-semibold uppercase text-[#416489]">
+                Session
+              </th>
+              <th className="w-[32%] border-l border-[#d6e0ea] px-5 py-4 text-left text-xs font-semibold uppercase text-[#416489]">
+                Session Scheduled
+              </th>
+              <th className="w-[25%] border-l border-[#d6e0ea] px-5 py-4 text-center text-xs font-semibold uppercase text-[#416489]">
+                Session Status
+              </th>
+              <th className="w-[25%] border-l border-[#d6e0ea] px-5 py-4 text-center text-xs font-semibold uppercase text-[#416489]">
+                Session Duration
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-[#e3e8ee]">
+            {sessions.map((session, index) => (
+              <tr key={session.id} className={index % 2 === 1 ? 'bg-[#f6f9fc]' : 'bg-white'}>
+                <td className="px-5 py-5 font-semibold text-[#08294f]">Session {index + 1}</td>
+                <td className="border-l border-[#e3e8ee] px-5 py-5 font-semibold text-[#08294f]">
+                  {format(new Date(session.date), 'MMM d, yyyy, hh:mm a')}
+                </td>
+                <td className="border-l border-[#e3e8ee] px-5 py-5 text-center">
+                  <SessionStatusBadge completed={session.completed} />
+                </td>
+                <td className="border-l border-[#e3e8ee] px-5 py-5 text-center">
+                  <DurationPill durationMinutes={session.durationMinutes} />
+                </td>
               </tr>
-            </thead>
-            <tbody className="divide-y divide-[#e3e8ee]">
-              {sessions.map((session, index) => (
-                <tr key={session.id} className={index % 2 === 1 ? 'bg-[#f6f9fc]' : 'bg-white'}>
-                  <td className="px-5 py-5 font-semibold text-[#08294f]">
-                    Session {index + 1}
-                  </td>
-                  <td className="border-l border-[#e3e8ee] px-5 py-5 font-semibold text-[#08294f]">
-                    {format(new Date(session.date), 'MMM d, yyyy, hh:mm a')}
-                  </td>
-                  <td className="border-l border-[#e3e8ee] px-5 py-5 text-center">
-                    <SessionStatusBadge completed={session.completed} />
-                  </td>
-                  <td className="border-l border-[#e3e8ee] px-5 py-5 text-center">
-                    <DurationPill durationMinutes={session.durationMinutes} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+            ))}
+          </tbody>
+        </table>
       </div>
-    </section>
+    </>
   );
 }
 
@@ -629,7 +692,7 @@ function ProgressRing({ value }: { value: number }) {
           cy="38"
           r="29"
           fill="none"
-          stroke="#feb139"
+          stroke="#16a34a"
           strokeLinecap="round"
           strokeWidth="6"
           strokeDasharray={circumference}
@@ -640,6 +703,66 @@ function ProgressRing({ value }: { value: number }) {
         {value}%
       </span>
     </div>
+  );
+}
+
+function SessionMetric({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="flex h-9 items-center gap-3 rounded-full border border-[#d6e0ea] bg-white px-4 shadow-sm">
+      <span className="text-xs text-[#416489]">{label}</span>
+      <span className="text-sm font-bold text-[#08294f]">{value}%</span>
+    </div>
+  );
+}
+
+function AssignmentBadge({
+  issued,
+  submitted,
+  graded,
+}: {
+  issued: boolean;
+  submitted: boolean;
+  graded: boolean;
+}) {
+  if (!issued) {
+    return <Badge className="rounded-full bg-gray-100 text-gray-700 hover:bg-gray-100">Not issued</Badge>;
+  }
+
+  if (graded) {
+    return (
+      <Badge className="rounded-full border border-green-200 bg-green-50 px-3 py-1 text-green-700 hover:bg-green-50">
+        Graded
+      </Badge>
+    );
+  }
+
+  if (submitted) {
+    return (
+      <Badge className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-amber-700 hover:bg-amber-50">
+        Submitted
+      </Badge>
+    );
+  }
+
+  return (
+    <Badge className="rounded-full border border-red-200 bg-red-50 px-3 py-1 text-red-600 hover:bg-red-50">
+      Pending
+    </Badge>
+  );
+}
+
+function ReportBadge({ done }: { done: boolean }) {
+  return (
+    <Badge
+      className={
+        done
+          ? 'gap-1.5 rounded-full border border-green-200 bg-green-50 px-3 py-1 text-green-700 hover:bg-green-50'
+          : 'rounded-full border border-red-200 bg-red-50 px-3 py-1 text-red-600 hover:bg-red-50'
+      }
+    >
+      {done && <CheckSquare className="h-3 w-3" />}
+      {done ? 'Done' : 'Pending'}
+    </Badge>
   );
 }
 
@@ -672,54 +795,6 @@ function formatSessionDuration(durationMinutes: number) {
   if (Number.isInteger(hours)) return `${hours}hr`;
 
   return `${hours.toFixed(1)}hrs`;
-}
-
-function SessionMetric({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="flex h-9 items-center gap-3 rounded-lg border border-[#d6e0ea] bg-white px-3 shadow-sm">
-      <span className="text-xs text-[#416489]">{label}</span>
-      <span className="text-sm font-bold text-[#08294f]">{value}%</span>
-    </div>
-  );
-}
-
-function AssignmentBadge({
-  issued,
-  submitted,
-  graded,
-}: {
-  issued: boolean;
-  submitted: boolean;
-  graded: boolean;
-}) {
-  if (!issued) {
-    return <Badge className="bg-gray-100 text-gray-700 hover:bg-gray-100">Not issued</Badge>;
-  }
-
-  if (graded) {
-    return <Badge className="rounded-full border border-green-200 bg-green-50 px-3 py-1 text-green-700 hover:bg-green-50">Graded</Badge>;
-  }
-
-  if (submitted) {
-    return <Badge className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-amber-700 hover:bg-amber-50">Submitted</Badge>;
-  }
-
-  return <Badge className="rounded-full border border-red-200 bg-red-50 px-3 py-1 text-red-600 hover:bg-red-50">Pending</Badge>;
-}
-
-function ReportBadge({ done }: { done: boolean }) {
-  return (
-    <Badge
-      className={
-        done
-          ? 'gap-1.5 rounded-full border border-green-200 bg-green-50 px-3 py-1 text-green-700 hover:bg-green-50'
-          : 'rounded-full border border-red-200 bg-red-50 px-3 py-1 text-red-600 hover:bg-red-50'
-      }
-    >
-      {done && <CheckSquare className="h-3 w-3" />}
-      {done ? 'Done' : 'Pending'}
-    </Badge>
-  );
 }
 
 function getInitials(name: string) {
