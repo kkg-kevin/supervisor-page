@@ -28,6 +28,7 @@ import {
   CheckSquare,
   ChevronLeft,
   ChevronRight,
+  Download,
   ExternalLink,
   Eye,
   FileText,
@@ -44,6 +45,7 @@ interface ClaimDetailsProps {
 }
 
 const percent = (value: number, total: number) => (total === 0 ? 100 : Math.round((value / total) * 100));
+type ActivityDrilldown = 'activity' | 'assignments' | 'reports';
 
 export function ClaimDetails({ course, onReview, onBack }: ClaimDetailsProps) {
   const [rejectionReason, setRejectionReason] = useState('');
@@ -51,9 +53,11 @@ export function ClaimDetails({ course, onReview, onBack }: ClaimDetailsProps) {
   const [selectedSessionIndex, setSelectedSessionIndex] = useState(0);
   const [isEtimsPreviewOpen, setIsEtimsPreviewOpen] = useState(false);
   const [showApproveConfirm, setShowApproveConfirm] = useState(false);
+  const [activityDrilldown, setActivityDrilldown] = useState<ActivityDrilldown>('activity');
 
   useEffect(() => {
     setSelectedSessionIndex(0);
+    setActivityDrilldown('activity');
     setShowRejectionInput(false);
     setRejectionReason('');
   }, [course?.id]);
@@ -97,6 +101,7 @@ export function ClaimDetails({ course, onReview, onBack }: ClaimDetailsProps) {
   const sessionAssignmentPercent = percent(gradedSessionAssignments, expectedSessionAssignments);
   const completedSessionReports = sessionReports.filter((report) => report.done).length;
   const sessionReportPercent = percent(completedSessionReports, sessionReports.length);
+  const selectedSessionLabel = `Session ${selectedSessionIndex + 1}`;
 
   const presentFor = (sessionId: string, studentId: string) =>
     course.attendance.find((mark) => mark.sessionId === sessionId && mark.studentId === studentId)
@@ -109,6 +114,32 @@ export function ClaimDetails({ course, onReview, onBack }: ClaimDetailsProps) {
   const goToNextSession = () => {
     setSelectedSessionIndex((current) => Math.min(current + 1, course.sessions.length - 1));
   };
+
+  if (activityDrilldown === 'assignments') {
+    return (
+      <AssignmentSessionDetails
+        course={course}
+        selectedSessionIndex={selectedSessionIndex}
+        sessionAssignments={sessionAssignments}
+        onBack={() => setActivityDrilldown('activity')}
+        onPreviousSession={goToPreviousSession}
+        onNextSession={goToNextSession}
+      />
+    );
+  }
+
+  if (activityDrilldown === 'reports') {
+    return (
+      <ReportSessionDetails
+        course={course}
+        selectedSessionIndex={selectedSessionIndex}
+        sessionReports={sessionReports}
+        onBack={() => setActivityDrilldown('activity')}
+        onPreviousSession={goToPreviousSession}
+        onNextSession={goToNextSession}
+      />
+    );
+  }
 
   const handleReject = () => {
     if (rejectionReason.trim()) {
@@ -287,7 +318,7 @@ export function ClaimDetails({ course, onReview, onBack }: ClaimDetailsProps) {
                 <div className="flex flex-col gap-4 border-b border-[#d6e0ea] bg-[#f8fbff] p-5 lg:flex-row lg:items-center lg:justify-between">
                   <div className="flex flex-col gap-3 md:flex-row md:items-center">
                     <div className="mr-1 min-w-[120px]">
-                      <p className="text-xl font-bold text-[#08294f]">Session {selectedSessionIndex + 1}</p>
+                      <p className="text-xl font-bold text-[#08294f]">{selectedSessionLabel}</p>
                       <p className="text-sm text-[#416489]">
                         {format(new Date(selectedSession.date), 'yyyy-MM-dd')}
                       </p>
@@ -337,10 +368,22 @@ export function ClaimDetails({ course, onReview, onBack }: ClaimDetailsProps) {
                           Attendance
                         </th>
                         <th className="w-[24%] border-l border-[#d6e0ea] px-4 py-4 text-center text-base font-semibold uppercase">
-                          Assignment
+                          <button
+                            type="button"
+                            onClick={() => setActivityDrilldown('assignments')}
+                            className="rounded-md px-2 py-1 font-semibold uppercase text-[#08294f] transition hover:bg-white hover:text-[#25476a] focus:outline-none focus:ring-2 focus:ring-[#25476a] focus:ring-offset-2"
+                          >
+                            Assignment
+                          </button>
                         </th>
                         <th className="w-[17%] border-l border-[#d6e0ea] px-4 py-4 text-center text-base font-semibold uppercase">
-                          Report
+                          <button
+                            type="button"
+                            onClick={() => setActivityDrilldown('reports')}
+                            className="rounded-md px-2 py-1 font-semibold uppercase text-[#08294f] transition hover:bg-white hover:text-[#25476a] focus:outline-none focus:ring-2 focus:ring-[#25476a] focus:ring-offset-2"
+                          >
+                            Report
+                          </button>
                         </th>
                       </tr>
                     </thead>
@@ -388,23 +431,39 @@ export function ClaimDetails({ course, onReview, onBack }: ClaimDetailsProps) {
                             <td className="border-l border-[#e3e8ee] px-4 py-5">
                               <div className="flex flex-wrap justify-center gap-2">
                                 {sessionAssignments.length === 0 ? (
-                                  <Badge className="rounded-full bg-gray-100 px-3 py-1 text-gray-700 hover:bg-gray-100">
+                                  <button
+                                    type="button"
+                                    onClick={() => setActivityDrilldown('assignments')}
+                                    className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700 transition hover:bg-gray-200"
+                                  >
                                     Not issued
-                                  </Badge>
+                                  </button>
                                 ) : (
                                   sessionAssignments.map((assignment) => (
-                                    <AssignmentBadge
+                                    <button
                                       key={assignment.id}
-                                      issued={assignment.issued}
-                                      submitted={assignment.submittedStudentIds.includes(student.id)}
-                                      graded={assignment.gradedStudentIds.includes(student.id)}
-                                    />
+                                      type="button"
+                                      onClick={() => setActivityDrilldown('assignments')}
+                                      className="rounded-full focus:outline-none focus:ring-2 focus:ring-[#25476a] focus:ring-offset-2"
+                                    >
+                                      <AssignmentBadge
+                                        issued={assignment.issued}
+                                        submitted={assignment.submittedStudentIds.includes(student.id)}
+                                        graded={assignment.gradedStudentIds.includes(student.id)}
+                                      />
+                                    </button>
                                   ))
                                 )}
                               </div>
                             </td>
                             <td className="border-l border-[#e3e8ee] px-4 py-5 text-center">
-                              <ReportBadge done={reportDone} />
+                              <button
+                                type="button"
+                                onClick={() => setActivityDrilldown('reports')}
+                                className="rounded-full focus:outline-none focus:ring-2 focus:ring-[#25476a] focus:ring-offset-2"
+                              >
+                                <ReportBadge done={reportDone} />
+                              </button>
                             </td>
                           </tr>
                         );
@@ -587,6 +646,343 @@ export function ClaimDetails({ course, onReview, onBack }: ClaimDetailsProps) {
       </Dialog>
     </>
   );
+}
+
+function AssignmentSessionDetails({
+  course,
+  selectedSessionIndex,
+  sessionAssignments,
+  onBack,
+  onPreviousSession,
+  onNextSession,
+}: {
+  course: CourseWithMentor;
+  selectedSessionIndex: number;
+  sessionAssignments: CourseWithMentor['assignments'];
+  onBack: () => void;
+  onPreviousSession: () => void;
+  onNextSession: () => void;
+}) {
+  const selectedSession = course.sessions[selectedSessionIndex] ?? course.sessions[0];
+  const sessionLabel = `Session ${selectedSessionIndex + 1}`;
+  const issuedCount = course.students.filter((student) =>
+    sessionAssignments.some((assignment) => assignment.issued || assignment.submittedStudentIds.includes(student.id) || assignment.gradedStudentIds.includes(student.id))
+  ).length;
+  const submittedCount = course.students.filter((student) =>
+    sessionAssignments.some((assignment) => assignment.submittedStudentIds.includes(student.id))
+  ).length;
+  const gradedCount = course.students.filter((student) =>
+    sessionAssignments.some((assignment) => assignment.gradedStudentIds.includes(student.id))
+  ).length;
+
+  return (
+    <div className="space-y-5">
+      <ActivityDetailHeader
+        title={`Assignments — ${sessionLabel}`}
+        date={selectedSession.date}
+        selectedSessionIndex={selectedSessionIndex}
+        totalSessions={course.sessions.length}
+        onBack={onBack}
+        onPreviousSession={onPreviousSession}
+        onNextSession={onNextSession}
+      />
+
+      <section className="flex flex-col gap-5 rounded-2xl border border-[#d6e0ea] bg-white p-5 shadow-sm md:flex-row md:items-center md:justify-between">
+        <div>
+          <p className="text-xs font-bold uppercase text-[#416489]">{course.name}</p>
+          <h2 className="mt-1 text-xl font-bold text-[#08294f]">{sessionLabel}</h2>
+          <p className="mt-2 text-sm text-[#416489]">
+            {format(new Date(selectedSession.date), 'yyyy-MM-dd')} · {course.students.length} students
+          </p>
+        </div>
+
+        <div className="grid grid-cols-3 gap-3">
+          <SummaryCounter value={gradedCount} label="Graded" tone="green" />
+          <SummaryCounter value={submittedCount} label="Submitted" tone="orange" />
+          <SummaryCounter value={issuedCount} label="Issued" tone="blue" />
+        </div>
+      </section>
+
+      <div className="overflow-hidden rounded-2xl border border-[#d6e0ea] bg-white shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[980px] text-sm">
+            <thead className="bg-[#eaf2fa] text-[#08294f]">
+              <tr>
+                <th className="w-[24%] px-4 py-4 text-left text-xs font-semibold uppercase text-[#416489]">
+                  Student Name
+                </th>
+                <th className="w-[16%] border-l border-[#d6e0ea] px-4 py-4 text-left text-xs font-semibold uppercase text-[#416489]">
+                  Assignment
+                </th>
+                <th className="w-[38%] border-l border-[#d6e0ea] px-4 py-4 text-center text-xs font-semibold uppercase text-[#416489]">
+                  Progress
+                </th>
+                <th className="w-[22%] border-l border-[#d6e0ea] px-4 py-4 text-center text-xs font-semibold uppercase text-[#416489]">
+                  Assignment File
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#e3e8ee]">
+              {course.students.map((student) => {
+                const status = getStudentAssignmentStatus(sessionAssignments, student.id);
+
+                return (
+                  <tr key={student.id} className="bg-white">
+                    <td className="px-4 py-5">
+                      <StudentNameCell name={student.name} />
+                    </td>
+                    <td className="border-l border-[#e3e8ee] px-4 py-5">
+                      <p className="font-bold text-[#08294f]">{sessionLabel}</p>
+                      <p className="mt-1 text-xs text-[#416489]">{sessionLabel}</p>
+                    </td>
+                    <td className="border-l border-[#e3e8ee] px-4 py-5">
+                      <AssignmentProgress status={status} />
+                    </td>
+                    <td className="border-l border-[#e3e8ee] px-4 py-5 text-center">
+                      <DownloadButton label="Download" />
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ReportSessionDetails({
+  course,
+  selectedSessionIndex,
+  sessionReports,
+  onBack,
+  onPreviousSession,
+  onNextSession,
+}: {
+  course: CourseWithMentor;
+  selectedSessionIndex: number;
+  sessionReports: CourseWithMentor['reports'];
+  onBack: () => void;
+  onPreviousSession: () => void;
+  onNextSession: () => void;
+}) {
+  const selectedSession = course.sessions[selectedSessionIndex] ?? course.sessions[0];
+  const sessionLabel = `Session ${selectedSessionIndex + 1}`;
+  const reportDone = sessionReports.length > 0 && sessionReports.every((report) => report.done);
+  const doneCount = reportDone ? course.students.length : 0;
+  const pendingCount = reportDone ? 0 : course.students.length;
+
+  return (
+    <div className="space-y-5">
+      <ActivityDetailHeader
+        title={`Reports — ${sessionLabel}`}
+        date={selectedSession.date}
+        selectedSessionIndex={selectedSessionIndex}
+        totalSessions={course.sessions.length}
+        onBack={onBack}
+        onPreviousSession={onPreviousSession}
+        onNextSession={onNextSession}
+      />
+
+      <section className="flex flex-col gap-5 rounded-2xl border border-[#d6e0ea] bg-white p-5 shadow-sm md:flex-row md:items-center md:justify-between">
+        <div>
+          <p className="text-xs font-bold uppercase text-[#416489]">{course.name}</p>
+          <h2 className="mt-1 text-xl font-bold text-[#08294f]">{sessionLabel} Report</h2>
+          <p className="mt-2 text-sm text-[#416489]">
+            {format(new Date(selectedSession.date), 'yyyy-MM-dd')} · {course.students.length} students
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <SummaryCounter value={doneCount} label="Done" tone="green" />
+          <SummaryCounter value={pendingCount} label="Pending" tone="red" />
+        </div>
+      </section>
+
+      <div className="overflow-hidden rounded-2xl border border-[#d6e0ea] bg-white shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[980px] text-sm">
+            <thead className="bg-[#eaf2fa] text-[#08294f]">
+              <tr>
+                <th className="w-[32%] px-4 py-4 text-left text-xs font-semibold uppercase text-[#416489]">
+                  Student Name
+                </th>
+                <th className="w-[25%] border-l border-[#d6e0ea] px-4 py-4 text-left text-xs font-semibold uppercase text-[#416489]">
+                  Report
+                </th>
+                <th className="w-[16%] border-l border-[#d6e0ea] px-4 py-4 text-left text-xs font-semibold uppercase text-[#416489]">
+                  Status
+                </th>
+                <th className="w-[27%] border-l border-[#d6e0ea] px-4 py-4 text-center text-xs font-semibold uppercase text-[#416489]">
+                  Download
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#e3e8ee]">
+              {course.students.map((student) => (
+                <tr key={student.id} className="bg-white">
+                  <td className="px-4 py-5">
+                    <StudentNameCell name={student.name} />
+                  </td>
+                  <td className="border-l border-[#e3e8ee] px-4 py-5">
+                    <p className="font-bold text-[#08294f]">{sessionLabel} Report</p>
+                    <p className="mt-1 text-xs text-[#416489]">{sessionLabel}</p>
+                  </td>
+                  <td className="border-l border-[#e3e8ee] px-4 py-5">
+                    <ReportBadge done={reportDone} />
+                  </td>
+                  <td className="border-l border-[#e3e8ee] px-4 py-5 text-center">
+                    <DownloadButton label="Download" />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ActivityDetailHeader({
+  title,
+  date,
+  selectedSessionIndex,
+  totalSessions,
+  onBack,
+  onPreviousSession,
+  onNextSession,
+}: {
+  title: string;
+  date: string;
+  selectedSessionIndex: number;
+  totalSessions: number;
+  onBack: () => void;
+  onPreviousSession: () => void;
+  onNextSession: () => void;
+}) {
+  return (
+    <header className="flex items-center gap-3">
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        onClick={onBack}
+        className="h-9 w-9 shrink-0 rounded-full text-[#25476a] hover:bg-white"
+        aria-label="Back to activity"
+      >
+        <ArrowLeft className="h-5 w-5" />
+      </Button>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        onClick={onPreviousSession}
+        disabled={selectedSessionIndex === 0}
+        className="h-9 w-9 shrink-0 rounded-full text-[#25476a] hover:bg-white"
+        aria-label="Previous session"
+      >
+        <ChevronLeft className="h-5 w-5" />
+      </Button>
+      <div className="min-w-0">
+        <h1 className="truncate text-2xl font-bold leading-tight text-[#08294f]">{title}</h1>
+        <p className="mt-1 text-sm text-[#416489]">{format(new Date(date), 'yyyy-MM-dd')}</p>
+      </div>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        onClick={onNextSession}
+        disabled={selectedSessionIndex === totalSessions - 1}
+        className="ml-2 h-9 w-9 shrink-0 rounded-full text-[#25476a] hover:bg-white"
+        aria-label="Next session"
+      >
+        <ChevronRight className="h-5 w-5" />
+      </Button>
+    </header>
+  );
+}
+
+function SummaryCounter({
+  value,
+  label,
+  tone,
+}: {
+  value: number;
+  label: string;
+  tone: 'green' | 'orange' | 'blue' | 'red';
+}) {
+  const toneClass = {
+    green: 'bg-green-50 text-[#009b52]',
+    orange: 'bg-orange-50 text-[#d15d00]',
+    blue: 'bg-[#f1f6fb] text-[#25476a]',
+    red: 'bg-rose-50 text-rose-600',
+  }[tone];
+
+  return (
+    <div className={`flex min-h-14 min-w-20 flex-col items-center justify-center rounded-xl px-4 ${toneClass}`}>
+      <span className="font-mono text-lg font-bold">{value}</span>
+      <span className="mt-1 text-[10px] font-bold uppercase">{label}</span>
+    </div>
+  );
+}
+
+function StudentNameCell({ name }: { name: string }) {
+  return (
+    <div className="flex items-center gap-3">
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#153e68] text-xs font-bold text-white">
+        {getInitials(name)}
+      </span>
+      <span className="font-semibold text-[#08294f]">{name}</span>
+    </div>
+  );
+}
+
+function AssignmentProgress({ status }: { status: 'issued' | 'submitted' | 'graded' }) {
+  const steps: Array<'issued' | 'submitted' | 'graded'> = ['issued', 'submitted', 'graded'];
+  const activeIndex = steps.indexOf(status);
+
+  return (
+    <div className="flex items-center justify-center">
+      <div className="flex items-center text-xs text-[#08294f]">
+        {steps.map((step, index) => (
+          <div key={step} className="flex items-center">
+            <span
+              className={`h-3 w-3 rounded-full ${
+                index <= activeIndex ? 'bg-[#25476a]' : 'border border-[#9bb2c7] bg-white'
+              }`}
+            />
+            <span className={`ml-2 capitalize ${index === activeIndex ? 'font-bold' : ''}`}>{step}</span>
+            {index < steps.length - 1 && <span className="mx-2 h-px w-6 bg-[#25476a]" />}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function DownloadButton({ label }: { label: string }) {
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      className="h-9 rounded-xl border-[#d6e0ea] px-4 font-bold text-[#153e68]"
+    >
+      <Download className="mr-2 h-4 w-4" />
+      {label}
+    </Button>
+  );
+}
+
+function getStudentAssignmentStatus(
+  assignments: CourseWithMentor['assignments'],
+  studentId: string
+): 'issued' | 'submitted' | 'graded' {
+  if (assignments.some((assignment) => assignment.gradedStudentIds.includes(studentId))) return 'graded';
+  if (assignments.some((assignment) => assignment.submittedStudentIds.includes(studentId))) return 'submitted';
+  return 'issued';
 }
 
 function CourseMethodIcon({ course, small = false }: { course: CourseWithMentor; small?: boolean }) {
