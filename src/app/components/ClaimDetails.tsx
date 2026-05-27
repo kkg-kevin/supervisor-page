@@ -265,12 +265,22 @@ export function ClaimDetails({ course, onReview, onBack }: ClaimDetailsProps) {
           </div>
 
           <div className="border-b border-[#d6e0ea] p-6 lg:border-b-0 lg:border-r">
-            <p className="text-xs font-semibold uppercase text-[#416489]">Amount Payable</p>
+            <p className="text-xs font-semibold uppercase text-[#416489]">Estimated Earnings</p>
             <p className="mt-2 text-3xl font-bold text-[#153e68]">KSh {amountPayable.toLocaleString()}</p>
-            <p className="mt-5 text-xs text-[#416489]">Advance payable</p>
-            <p className="mt-2 font-mono text-base font-bold text-[#d15d00]">
-              KSh {advancePayable.toLocaleString()}
-            </p>
+            <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+              <div>
+                <p className="text-xs text-[#416489]">Estimated advance</p>
+                <p className="mt-2 font-mono text-base font-bold text-[#d15d00]">
+                  KSh {advancePayable.toLocaleString()}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-[#416489]">Amount requested</p>
+                <p className="mt-2 font-mono text-base font-bold text-[#153e68]">
+                  KSh {requestedPayment.toLocaleString()}
+                </p>
+              </div>
+            </div>
           </div>
 
           <div className="p-6">
