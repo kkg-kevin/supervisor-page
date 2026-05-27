@@ -1,23 +1,22 @@
-# Mentor Activity Review and Claim Approval
+# Supervisor Mentor Claim Review
 
-A React, TypeScript, Vite, and Tailwind front-end prototype for supervisors to review mentor-submitted course claims. The page is designed as a read-only audit workflow: supervisors inspect the mentor's submitted activity, review the attached eTIMS payment reference, then approve or reject the claim.
+A React, TypeScript, Vite, and Tailwind CSS front-end prototype for supervisors who review mentor payment claims. The supervisor can open a mentor course claim, inspect the same activity-style view a mentor submitted, review attendance, assignments, reports, and approve or reject the claim.
 
-## Overview
+This project is currently frontend-only. All claim data is mock data, and all approve/reject decisions are stored locally in React state for the current browser session.
 
-The app models the supervisor side of a mentor claim process. Each course claim includes a mentor, payment summary, submitted date, eTIMS reference, sessions, attendance, assignments, reports, students, and review status.
+## What This App Does
 
-Supervisors can:
+The app supports a supervisor workflow where mentors submit payment claims for courses they have taught. A supervisor can:
 
-- View all submitted course claims as course cards
-- Filter claims by status
-- Open a full-page course claim review
-- Move through each session in a course
-- Inspect attendance, assignment, and report status per student for the selected session
-- Preview or view the mentor-submitted eTIMS reference
-- Approve eligible claims
-- Reject claims with a required comment
-
-All data is mock data and all decisions are stored locally in React state.
+- View submitted mentor course claims in a searchable, filterable table
+- Open each claim to see a mentor-style course activity page
+- Review course progress, students, sessions, attendance, assignments, and reports
+- See the mentor's requested amount beside estimated earnings and estimated advance
+- Drill into assignment and report pages by clicking the table headings
+- Move backward and forward through sessions
+- Preview a mock eTIMS payment reference
+- Approve a claim and see that it was moved to admin for processing
+- Reject a claim with a required comment
 
 ## Tech Stack
 
@@ -25,9 +24,247 @@ All data is mock data and all decisions are stored locally in React state.
 - TypeScript
 - Vite
 - Tailwind CSS
-- shadcn/Radix UI components
+- Radix UI / shadcn-style components
 - Lucide React icons
 - date-fns
+
+## Getting Started
+
+Install dependencies:
+
+```bash
+npm install
+```
+
+Start the development server:
+
+```bash
+npm run dev
+```
+
+Vite will print a local URL, usually:
+
+```text
+http://localhost:5173/
+```
+
+Build for production:
+
+```bash
+npm run build
+```
+
+The production build is generated in `dist/`.
+
+## Main Workflow
+
+1. The supervisor lands on the submitted claims table.
+2. Claims can be searched and filtered by status.
+3. Clicking a claim opens the mentor course claim view.
+4. The supervisor reviews:
+   - Course progress
+   - Amount requested
+   - Estimated earnings
+   - Estimated advance
+   - Payment actions
+   - Attendance, assignment, and report activity
+   - Claim history and eTIMS reference
+5. The supervisor can move between sessions using the session arrows.
+6. Clicking the `ASSIGNMENT` heading opens the assignment detail page for the selected session.
+7. Clicking the `REPORT` heading opens the report detail page for the selected session.
+8. The supervisor approves or rejects the claim.
+
+## Claims Table
+
+`src/app/components/ClaimsList.tsx` renders the main submitted claims table.
+
+Each row shows:
+
+- Course name and location/delivery mode
+- Mentor name
+- Teaching method
+- Completed sessions
+- Requested claim amount
+- Submission date
+- Claim status
+- View action
+
+Clicking a row opens the full claim review page.
+
+## Claim Review Page
+
+`src/app/components/ClaimDetails.tsx` renders the main claim review experience.
+
+The top section is organized into three areas:
+
+- Course progress: completed sessions and student count
+- Payment summary: amount requested, estimated earnings, and estimated advance
+- Payment actions: approve/reject controls and approval processing notification
+
+When a claim is approved, the Payment Actions section shows:
+
+```text
+This claim was approved and moved to admin for processing. Admin pays the mentor claims.
+```
+
+## Payment Summary
+
+The payment section uses calculated mock values:
+
+- `Amount requested`: the value submitted by the mentor for payment
+- `Estimated Earnings`: the full estimated value for the course
+- `Estimated advance`: the estimated advance value
+
+The requested amount is calculated from the claim type:
+
+- Full payment request: uses estimated earnings
+- Advance request: uses estimated advance
+
+The calculations live in:
+
+```text
+src/app/utils/claimValidation.ts
+```
+
+## Session Activity View
+
+For non-Google Meet courses, the activity table shows each student for the selected session:
+
+- Student name and initials
+- Attendance status
+- Assignment status
+- Report status
+
+Attendance appears as a read-only present/absent switch.
+
+Assignment status can be:
+
+- Issued
+- Submitted
+- Graded
+
+Report status can be:
+
+- Pending
+- Done
+
+## Assignment Detail View
+
+Clicking the `ASSIGNMENT` column heading opens a session-level assignment page.
+
+The assignment page includes:
+
+- Back button to return to the claim activity view
+- Previous and next session arrows
+- Session title and date
+- Counts for graded, submitted, and issued assignments
+- Student assignment progress table
+- Download buttons for the frontend mockup
+
+The assignment progress is shown as:
+
+```text
+Issued -> Submitted -> Graded
+```
+
+## Report Detail View
+
+Clicking the `REPORT` column heading opens a session-level report page.
+
+The report page includes:
+
+- Back button to return to the claim activity view
+- Previous and next session arrows
+- Session title and date
+- Counts for done and pending reports
+- Student report status table
+- Download buttons for the frontend mockup
+
+## Google Meet Courses
+
+Google Meet claims do not show student attendance, assignments, or reports. They use a session table instead, showing:
+
+- Session number
+- Scheduled date and time
+- Session status
+- Session duration
+
+## Claim History and eTIMS Preview
+
+The claim history panel shows:
+
+- Payment claim title
+- Submitted date and time
+- Claim status
+- Requested amount
+- Invoice filename
+- Claim note
+
+The eTIMS preview is a mock document generated in the browser. It can be previewed in a dialog or opened in a new browser tab.
+
+## Approving and Rejecting Claims
+
+Approving a pending claim:
+
+- Changes its status to `Approved`
+- Shows the admin-processing notification inside Payment Actions
+- Stores the decision in local React state
+
+Rejecting a pending claim:
+
+- Requires a rejection comment
+- Changes its status to `Rejected`
+- Stores the rejection reason on the claim
+
+Refreshing the page resets all decisions because there is no backend persistence yet.
+
+## Mock Data
+
+Mock claims are defined in:
+
+```text
+src/app/data/mockClaims.ts
+```
+
+Each claim includes:
+
+- Course details
+- Mentor details
+- Teaching method
+- Payment type
+- Claim status
+- eTIMS document name
+- Submitted date
+- Students
+- Sessions
+- Attendance records
+- Assignments
+- Reports
+- Optional rejection reason
+
+## Types
+
+Core TypeScript types live in:
+
+```text
+src/app/types.ts
+```
+
+Important types include:
+
+- `TeachingMethod`
+- `PaymentType`
+- `ClaimStatus`
+- `Student`
+- `Session`
+- `Attendance`
+- `Assignment`
+- `Report`
+- `Course`
+- `Mentor`
+- `CourseWithMentor`
+- `ReviewAction`
+- `Filters`
 
 ## Project Structure
 
@@ -51,218 +288,13 @@ All data is mock data and all decisions are stored locally in React state.
 |   |   |-- App.tsx
 |   |   `-- types.ts
 |   |-- styles/
-|   `-- main.tsx
+|   |-- main.tsx
 |-- index.html
 |-- package.json
 |-- package-lock.json
 |-- postcss.config.mjs
 `-- vite.config.ts
 ```
-
-## Getting Started
-
-Install dependencies:
-
-```bash
-npm install
-```
-
-Start the local development server:
-
-```bash
-npm run dev
-```
-
-Vite will print a local URL, usually:
-
-```text
-http://localhost:5173/
-```
-
-Build for production:
-
-```bash
-npm run build
-```
-
-The production output is generated in `dist/`.
-
-## Main Workflow
-
-1. The supervisor lands on the Mentor Activity Review dashboard.
-2. Course claims appear as cards with course name, mentor, claim amount, sessions, submission date, and status.
-3. The supervisor uses the status tabs to filter claims:
-   - All
-   - Pending
-   - Approved
-   - Rejected
-4. Clicking a course opens a full-page claim review.
-5. The supervisor reviews the claim summary and mentor activity.
-6. The supervisor uses the session arrows to move through each course session.
-7. For the selected session, the supervisor reviews every student in a table:
-   - Attendance
-   - Assignment
-   - Report
-8. The supervisor previews or views the attached eTIMS payment reference.
-9. The supervisor approves the claim or rejects it with a comment.
-
-## Claim Cards
-
-`src/app/components/ClaimsList.tsx` renders the supervisor claim cards.
-
-Each card shows:
-
-- Course name
-- Course location or delivery mode
-- Mentor name
-- Claim status
-- Completed sessions
-- Claim amount
-- Submitted date
-
-Clicking a card opens the full review page for that course claim.
-
-## Course Review Page
-
-`src/app/components/ClaimDetails.tsx` renders the full claim review page.
-
-The review page includes:
-
-- Back arrow to return to the claim cards
-- Claim status badge
-- Course name and mentor name
-- Submitted date
-- Total earnings
-- Advance claimed
-- Remaining balance
-- Claim amount
-- Completion, attendance, assignment, and report metrics
-- Session-by-session review table
-- eTIMS payment reference section
-- Approve and reject actions
-
-The mentor activity is read-only. Supervisors cannot edit sessions, attendance, assignments, reports, students, or eTIMS data.
-
-## Session Review
-
-The session review area lets the supervisor move from session to session with previous and next arrows.
-
-For the selected session, the table lists all students in that course and shows:
-
-- Student initials and name
-- Attendance as a read-only present/absent switch
-- Assignment status:
-  - Not issued
-  - Pending
-  - Submitted
-  - Graded
-- Report status:
-  - Done
-  - Pending
-
-The table is designed so a course with 6 students, or more, can show every student row for that session.
-
-## eTIMS Payment Reference
-
-Each course claim includes an `etimsDocument` value in the mock data.
-
-The supervisor can:
-
-- Preview the eTIMS reference in an in-app dialog
-- Open a full mock document view in a new browser tab/window
-
-The eTIMS section appears just above the approve/reject controls so the payment reference is reviewed before the final decision.
-
-## Validation Logic
-
-Validation lives in:
-
-```text
-src/app/utils/claimValidation.ts
-```
-
-The app computes:
-
-- Course completion percentage
-- Attendance percentage
-- Assignment grading percentage
-- Report completion percentage
-
-Rules:
-
-| Rule | Requirement |
-| --- | --- |
-| Attendance | Must be at least 90% |
-| Assignments | Must be at least 90% |
-| Reports | Must be at least 90% |
-| Full payment | Course completion must be 100% |
-| Advance payment | Course completion must be at least 30% |
-
-If a pending claim does not satisfy the validation rules, the approve button is disabled. The validation logic remains active even though the large incomplete-activity warning banner is not shown.
-
-## Mock Data
-
-Mock course claim data is defined in:
-
-```text
-src/app/data/mockClaims.ts
-```
-
-The primary exported dataset is:
-
-```ts
-INITIAL_COURSES
-```
-
-Each course claim includes:
-
-- Course details
-- Mentor details
-- Payment details
-- Claim status
-- Submitted date
-- eTIMS document filename
-- Students
-- Sessions
-- Attendance records
-- Assignments
-- Reports
-- Optional rejection reason
-
-## Types
-
-Core types live in:
-
-```text
-src/app/types.ts
-```
-
-Important types include:
-
-- `Course`
-- `Student`
-- `Session`
-- `Attendance`
-- `Assignment`
-- `Report`
-- `ClaimStatus`
-- `Mentor`
-- `CourseWithMentor`
-- `ReviewAction`
-
-## Local State
-
-The app has no backend. Review decisions are stored in React state inside `src/app/App.tsx`.
-
-Approving a claim changes its status to `Approved`.
-
-Rejecting a claim:
-
-- Requires a comment
-- Changes its status to `Rejected`
-- Stores the rejection comment on the course claim
-
-Refreshing the page resets decisions back to the mock data.
 
 ## Available Scripts
 
@@ -278,16 +310,21 @@ npm run build
 
 Builds the app for production.
 
+## Current Limitations
+
+- Data is mocked in the frontend
+- Decisions are not persisted after refresh
+- Download buttons are visual placeholders
+- eTIMS preview is a generated mock document
+- Authentication, roles, and admin payment processing are not connected yet
+
 ## Future Improvements
 
-- Connect course claims to a backend API
-- Persist review decisions in a database
-- Replace mock eTIMS documents with real uploaded PDF files
-- Add authentication and supervisor roles
-- Add audit history for approval and rejection decisions
-- Add tests for validation and review actions
-- Add pagination or search for large claim volumes
-
-## License
-
-No license has been specified yet. Add one before distributing or using this project in production.
+- Connect claims to a backend API
+- Persist approval and rejection decisions
+- Connect admin payment processing
+- Replace mock eTIMS previews with real uploaded files
+- Add authentication and supervisor/admin roles
+- Add audit logs for claim decisions
+- Add pagination for large claim volumes
+- Add tests for payment calculations and review actions

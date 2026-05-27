@@ -17,8 +17,6 @@ import {
   getAmountPayable,
   getRequestedPayment,
   getReviewMetrics,
-  getValidationMessage,
-  isClaimValid,
 } from '../utils/claimValidation';
 import {
   AlertCircle,
@@ -74,8 +72,6 @@ export function ClaimDetails({ course, onReview, onBack }: ClaimDetailsProps) {
   }
 
   const metrics = getReviewMetrics(course);
-  const validationMessage = getValidationMessage(course);
-  const canApprove = isClaimValid(course);
   const amountPayable = getAmountPayable(course);
   const advancePayable = getAdvancePayable(course);
   const requestedPayment = getRequestedPayment(course);
@@ -265,20 +261,28 @@ export function ClaimDetails({ course, onReview, onBack }: ClaimDetailsProps) {
           </div>
 
           <div className="border-b border-[#d6e0ea] p-6 lg:border-b-0 lg:border-r">
-            <p className="text-xs font-semibold uppercase text-[#416489]">Estimated Earnings</p>
-            <p className="mt-2 text-3xl font-bold text-[#153e68]">KSh {amountPayable.toLocaleString()}</p>
-            <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
-              <div>
-                <p className="text-xs text-[#416489]">Estimated advance</p>
-                <p className="mt-2 font-mono text-base font-bold text-[#d15d00]">
-                  KSh {advancePayable.toLocaleString()}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-[#416489]">Amount requested</p>
-                <p className="mt-2 font-mono text-base font-bold text-[#153e68]">
+            <div className="grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">
+              <div className="rounded-2xl border border-green-100 bg-green-50/60 px-5 py-4">
+                <p className="text-xs font-bold uppercase text-green-700">Amount requested</p>
+                <p className="mt-3 font-mono text-4xl font-bold leading-none text-green-800">
                   KSh {requestedPayment.toLocaleString()}
                 </p>
+              </div>
+
+              <div className="grid gap-3">
+                <div className="rounded-xl border border-[#d6e0ea] bg-white px-4 py-3">
+                  <p className="text-xs font-semibold uppercase text-[#416489]">Estimated Earnings</p>
+                  <p className="mt-2 text-2xl font-bold text-[#153e68]">
+                    KSh {amountPayable.toLocaleString()}
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-orange-100 bg-orange-50/70 px-4 py-3">
+                  <p className="text-xs font-semibold uppercase text-[#d15d00]">Estimated advance</p>
+                  <p className="mt-2 font-mono text-lg font-bold text-[#d15d00]">
+                    KSh {advancePayable.toLocaleString()}
+                  </p>
+                </div>
               </div>
             </div>
           </div>
@@ -288,11 +292,19 @@ export function ClaimDetails({ course, onReview, onBack }: ClaimDetailsProps) {
             <p className="mt-2 text-sm font-semibold text-[#08294f]">
               Review the mentor payment claim and submitted activity.
             </p>
+            {course.claimStatus === 'Approved' && (
+              <p className="mt-4 flex items-start gap-3 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
+                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" />
+                <span>
+                  This claim was approved and moved to admin for processing.
+                </span>
+              </p>
+            )}
             <div className="mt-7 flex flex-col gap-3 sm:flex-row lg:flex-col xl:flex-row">
               <Button
                 type="button"
                 onClick={() => setShowApproveConfirm(true)}
-                disabled={course.claimStatus !== 'Pending Review' || !canApprove}
+                disabled={course.claimStatus !== 'Pending Review'}
                 className="h-11 flex-1 rounded-xl bg-[#25476a] font-bold text-white hover:bg-[#1d3a58]"
               >
                 <CheckCircle2 className="mr-2 h-4 w-4" />
@@ -311,13 +323,6 @@ export function ClaimDetails({ course, onReview, onBack }: ClaimDetailsProps) {
             </div>
           </div>
         </section>
-
-        {validationMessage && (
-          <p className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-            <AlertCircle size={16} />
-            {validationMessage}
-          </p>
-        )}
 
         <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(360px,0.92fr)]">
           <div className="overflow-hidden rounded-2xl border border-[#d6e0ea] bg-white shadow-sm">
@@ -616,7 +621,7 @@ export function ClaimDetails({ course, onReview, onBack }: ClaimDetailsProps) {
             <Button variant="outline" onClick={() => setShowApproveConfirm(false)}>
               Cancel
             </Button>
-            <Button onClick={handleApprove} disabled={!canApprove}>
+            <Button onClick={handleApprove}>
               Confirm Approve
             </Button>
           </div>
