@@ -929,7 +929,7 @@ function SummaryCounter({
   tone: 'green' | 'orange' | 'blue' | 'red';
 }) {
   const toneClass = {
-    green: 'bg-green-50 text-[#009b52]',
+    green: 'bg-amber-50 text-[#b45309]',
     orange: 'bg-orange-50 text-[#d15d00]',
     blue: 'bg-[#f1f6fb] text-[#25476a]',
     red: 'bg-rose-50 text-rose-600',
@@ -1141,7 +1141,7 @@ function AssignmentBadge({
 
   if (graded) {
     return (
-      <Badge className="rounded-full border border-green-200 bg-green-50 px-3 py-1 text-green-700 hover:bg-green-50">
+      <Badge className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-amber-700 hover:bg-amber-50">
         Graded
       </Badge>
     );
@@ -1167,7 +1167,7 @@ function ReportBadge({ done }: { done: boolean }) {
     <Badge
       className={
         done
-          ? 'gap-1.5 rounded-full border border-green-200 bg-green-50 px-3 py-1 text-green-700 hover:bg-green-50'
+          ? 'gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-amber-700 hover:bg-amber-50'
           : 'rounded-full border border-red-200 bg-red-50 px-3 py-1 text-red-600 hover:bg-red-50'
       }
     >
