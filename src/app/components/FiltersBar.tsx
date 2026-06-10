@@ -26,9 +26,9 @@ export function FiltersBar({ filters, onFilterChange, onClearFilters }: FiltersB
   const hasActiveFilters = filters.status !== 'all' || filters.search.trim() !== '';
 
   return (
-    <div className="flex flex-col gap-3 rounded-lg border border-gray-200 bg-white p-3 sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center">
-        <div className="relative w-full sm:max-w-xs">
+    <div className="flex w-full justify-end">
+      <div className="flex w-full flex-col gap-3 rounded-lg border border-gray-200 bg-white p-3 sm:w-auto sm:flex-row sm:items-center">
+        <div className="relative w-full sm:w-72">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           <Input
             type="search"
@@ -52,17 +52,17 @@ export function FiltersBar({ filters, onFilterChange, onClearFilters }: FiltersB
             ))}
           </SelectContent>
         </Select>
-      </div>
 
-      {hasActiveFilters && (
-        <button
-          type="button"
-          onClick={onClearFilters}
-          className="self-start text-sm text-gray-500 hover:text-blue-600 sm:self-auto"
-        >
-          Clear Filters
-        </button>
-      )}
+        {hasActiveFilters && (
+          <button
+            type="button"
+            onClick={onClearFilters}
+            className="self-start whitespace-nowrap text-sm text-gray-500 hover:text-blue-600 sm:self-auto"
+          >
+            Clear Filters
+          </button>
+        )}
+      </div>
     </div>
   );
 }
