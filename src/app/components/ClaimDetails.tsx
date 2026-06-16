@@ -422,7 +422,7 @@ export function ClaimDetails({ course, onReview, onBack }: ClaimDetailsProps) {
                               <div className="flex flex-col items-center gap-1">
                                 <span
                                   className={`relative h-7 w-14 rounded-full ${
-                                    isPresent ? 'bg-[#06c167]' : 'bg-red-400'
+                                    isPresent ? 'bg-[#38aae1]' : 'bg-red-400'
                                   }`}
                                   aria-label={isPresent ? 'Present' : 'Absent'}
                                 >
@@ -435,7 +435,7 @@ export function ClaimDetails({ course, onReview, onBack }: ClaimDetailsProps) {
                                 <span
                                   className={
                                     isPresent
-                                      ? 'text-xs font-semibold text-[#009b52]'
+                                      ? 'text-xs font-semibold text-[#38aae1]'
                                       : 'text-xs font-semibold text-red-600'
                                   }
                                 >
@@ -1143,7 +1143,7 @@ function AssignmentBadge({
 
   if (graded) {
     return (
-      <Badge className="rounded-full border border-[#25476a]/30 bg-[#25476a]/10 px-3 py-1 text-[#25476a] hover:bg-[#25476a]/10">
+      <Badge className="rounded-full border border-[#38aae1]/30 bg-[#38aae1]/10 px-3 py-1 text-[#38aae1] hover:bg-[#38aae1]/10">
         Graded
       </Badge>
     );
@@ -1169,7 +1169,7 @@ function ReportBadge({ done }: { done: boolean }) {
     <Badge
       className={
         done
-          ? 'gap-1.5 rounded-full border border-[#25476a]/30 bg-[#25476a]/10 px-3 py-1 text-[#25476a] hover:bg-[#25476a]/10'
+          ? 'gap-1.5 rounded-full border border-[#38aae1]/30 bg-[#38aae1]/10 px-3 py-1 text-[#38aae1] hover:bg-[#38aae1]/10'
           : 'rounded-full border border-[#feb139]/30 bg-[#feb139]/10 px-3 py-1 text-[#feb139] hover:bg-[#feb139]/10'
       }
     >
