@@ -262,24 +262,24 @@ export function ClaimDetails({ course, onReview, onBack }: ClaimDetailsProps) {
 
           <div className="border-b border-[#d6e0ea] p-6 lg:border-b-0 lg:border-r">
             <div className="grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">
-              <div className="rounded-2xl border border-green-100 bg-green-50/60 px-5 py-4">
-                <p className="text-xs font-bold uppercase text-green-700">Amount requested</p>
-                <p className="mt-3 font-mono text-4xl font-bold leading-none text-green-800">
+              <div className="rounded-2xl border border-[#feb139]/30 bg-[#feb139]/10 px-5 py-4">
+                <p className="text-xs font-bold uppercase text-[#feb139]">Amount requested</p>
+                <p className="mt-3 font-mono text-4xl font-bold leading-none text-[#feb139]">
                   KSh {requestedPayment.toLocaleString()}
                 </p>
               </div>
 
               <div className="grid gap-3">
-                <div className="rounded-xl border border-[#d6e0ea] bg-white px-4 py-3">
-                  <p className="text-xs font-semibold uppercase text-[#416489]">Estimated Earnings</p>
-                  <p className="mt-2 text-2xl font-bold text-[#153e68]">
+                <div className="rounded-xl border border-[#38aae1]/30 bg-[#38aae1]/10 px-4 py-3">
+                  <p className="text-xs font-semibold uppercase text-[#38aae1]">Estimated Earnings</p>
+                  <p className="mt-2 text-2xl font-bold text-[#38aae1]">
                     KSh {amountPayable.toLocaleString()}
                   </p>
                 </div>
 
-                <div className="rounded-xl border border-orange-100 bg-orange-50/70 px-4 py-3">
-                  <p className="text-xs font-semibold uppercase text-[#d15d00]">Estimated advance</p>
-                  <p className="mt-2 font-mono text-lg font-bold text-[#d15d00]">
+                <div className="rounded-xl border border-[#25476a]/30 bg-[#25476a]/10 px-4 py-3">
+                  <p className="text-xs font-semibold uppercase text-[#25476a]">Estimated advance</p>
+                  <p className="mt-2 font-mono text-lg font-bold text-[#25476a]">
                     KSh {advancePayable.toLocaleString()}
                   </p>
                 </div>
@@ -338,9 +338,9 @@ export function ClaimDetails({ course, onReview, onBack }: ClaimDetailsProps) {
                         {format(new Date(selectedSession.date), 'yyyy-MM-dd')}
                       </p>
                     </div>
-                    <SessionMetric label="Attendance" value={sessionAttendancePercent} />
-                    <SessionMetric label="Assignment" value={sessionAssignmentPercent} />
-                    <SessionMetric label="Report" value={sessionReportPercent} />
+                    <SessionMetric label="Attendance" value={sessionAttendancePercent} color="#25476a" />
+                    <SessionMetric label="Assignment" value={sessionAssignmentPercent} color="#38aae1" />
+                    <SessionMetric label="Report" value={sessionReportPercent} color="#feb139" />
                   </div>
 
                   <div className="flex items-center gap-5 self-start text-[#416489] lg:self-auto">
@@ -386,7 +386,7 @@ export function ClaimDetails({ course, onReview, onBack }: ClaimDetailsProps) {
                           <button
                             type="button"
                             onClick={() => setActivityDrilldown('assignments')}
-                            className="rounded-md px-2 py-1 font-semibold uppercase text-[#08294f] transition hover:bg-white hover:text-[#25476a] focus:outline-none focus:ring-2 focus:ring-[#25476a] focus:ring-offset-2"
+                            className="rounded-md px-2 py-1 font-semibold uppercase text-[#38aae1] transition hover:bg-[#38aae1]/10 hover:text-[#38aae1] focus:outline-none focus:ring-2 focus:ring-[#38aae1] focus:ring-offset-2"
                           >
                             Assignment
                           </button>
@@ -395,7 +395,7 @@ export function ClaimDetails({ course, onReview, onBack }: ClaimDetailsProps) {
                           <button
                             type="button"
                             onClick={() => setActivityDrilldown('reports')}
-                            className="rounded-md px-2 py-1 font-semibold uppercase text-[#08294f] transition hover:bg-white hover:text-[#25476a] focus:outline-none focus:ring-2 focus:ring-[#25476a] focus:ring-offset-2"
+                            className="rounded-md px-2 py-1 font-semibold uppercase text-[#feb139] transition hover:bg-[#feb139]/10 hover:text-[#feb139] focus:outline-none focus:ring-2 focus:ring-[#feb139] focus:ring-offset-2"
                           >
                             Report
                           </button>
@@ -929,10 +929,10 @@ function SummaryCounter({
   tone: 'green' | 'orange' | 'blue' | 'red';
 }) {
   const toneClass = {
-    green: 'bg-amber-50 text-[#b45309]',
-    orange: 'bg-orange-50 text-[#d15d00]',
-    blue: 'bg-[#f1f6fb] text-[#25476a]',
-    red: 'bg-rose-50 text-rose-600',
+    green: 'bg-[#25476a]/10 text-[#25476a]',
+    orange: 'bg-[#feb139]/10 text-[#feb139]',
+    blue: 'bg-[#38aae1]/10 text-[#38aae1]',
+    red: 'bg-[#feb139]/10 text-[#feb139]',
   }[tone];
 
   return (
@@ -1023,14 +1023,14 @@ function getCourseLocation(course: CourseWithMentor) {
 
 function getClaimBadgeClass(status: CourseWithMentor['claimStatus']) {
   if (status === 'Approved') {
-    return 'rounded-full border border-green-200 bg-green-50 px-3 py-1 text-green-700 hover:bg-green-50';
+    return 'rounded-full border border-[#25476a]/30 bg-[#25476a]/10 px-3 py-1 text-[#25476a] hover:bg-[#25476a]/10';
   }
 
   if (status === 'Rejected') {
-    return 'rounded-full border border-red-200 bg-red-50 px-3 py-1 text-red-600 hover:bg-red-50';
+    return 'rounded-full border border-[#38aae1]/30 bg-[#38aae1]/10 px-3 py-1 text-[#38aae1] hover:bg-[#38aae1]/10';
   }
 
-  return 'rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-blue-700 hover:bg-blue-50';
+  return 'rounded-full border border-[#feb139]/30 bg-[#feb139]/10 px-3 py-1 text-[#feb139] hover:bg-[#feb139]/10';
 }
 
 function PreviewField({ label, value }: { label: string; value: string }) {
@@ -1117,11 +1117,13 @@ function ProgressRing({ value }: { value: number }) {
   );
 }
 
-function SessionMetric({ label, value }: { label: string; value: number }) {
+function SessionMetric({ label, value, color }: { label: string; value: number; color?: string }) {
+  const textColor = color || '#416489';
+  const borderColor = color || '#d6e0ea';
   return (
-    <div className="flex h-9 items-center gap-3 rounded-full border border-[#d6e0ea] bg-white px-4 shadow-sm">
-      <span className="text-xs text-[#416489]">{label}</span>
-      <span className="text-sm font-bold text-[#08294f]">{value}%</span>
+    <div className="flex h-9 items-center gap-3 rounded-full border px-4 shadow-sm" style={{ borderColor, backgroundColor: `${color}10` }}>
+      <span className="text-xs" style={{ color: textColor }}>{label}</span>
+      <span className="text-sm font-bold" style={{ color: textColor }}>{value}%</span>
     </div>
   );
 }
@@ -1141,7 +1143,7 @@ function AssignmentBadge({
 
   if (graded) {
     return (
-      <Badge className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-amber-700 hover:bg-amber-50">
+      <Badge className="rounded-full border border-[#25476a]/30 bg-[#25476a]/10 px-3 py-1 text-[#25476a] hover:bg-[#25476a]/10">
         Graded
       </Badge>
     );
@@ -1149,14 +1151,14 @@ function AssignmentBadge({
 
   if (submitted) {
     return (
-      <Badge className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-amber-700 hover:bg-amber-50">
+      <Badge className="rounded-full border border-[#38aae1]/30 bg-[#38aae1]/10 px-3 py-1 text-[#38aae1] hover:bg-[#38aae1]/10">
         Submitted
       </Badge>
     );
   }
 
   return (
-    <Badge className="rounded-full border border-red-200 bg-red-50 px-3 py-1 text-red-600 hover:bg-red-50">
+    <Badge className="rounded-full border border-[#feb139]/30 bg-[#feb139]/10 px-3 py-1 text-[#feb139] hover:bg-[#feb139]/10">
       Pending
     </Badge>
   );
@@ -1167,8 +1169,8 @@ function ReportBadge({ done }: { done: boolean }) {
     <Badge
       className={
         done
-          ? 'gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-amber-700 hover:bg-amber-50'
-          : 'rounded-full border border-red-200 bg-red-50 px-3 py-1 text-red-600 hover:bg-red-50'
+          ? 'gap-1.5 rounded-full border border-[#25476a]/30 bg-[#25476a]/10 px-3 py-1 text-[#25476a] hover:bg-[#25476a]/10'
+          : 'rounded-full border border-[#feb139]/30 bg-[#feb139]/10 px-3 py-1 text-[#feb139] hover:bg-[#feb139]/10'
       }
     >
       {done && <CheckSquare className="h-3 w-3" />}
