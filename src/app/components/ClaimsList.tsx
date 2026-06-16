@@ -32,11 +32,11 @@ interface ClaimsListProps {
 const getStatusColor = (status: string) => {
   switch (status) {
     case 'Pending Review':
-      return 'bg-amber-100 text-amber-800 hover:bg-amber-100';
+      return 'bg-[#feb139]/10 text-[#feb139] hover:bg-[#feb139]/10';
     case 'Approved':
-      return 'bg-green-100 text-green-800 hover:bg-green-100';
+      return 'bg-[#25476a]/10 text-[#25476a] hover:bg-[#25476a]/10';
     case 'Rejected':
-      return 'bg-red-100 text-red-800 hover:bg-red-100';
+      return 'bg-[#38aae1]/10 text-[#38aae1] hover:bg-[#38aae1]/10';
     default:
       return 'bg-gray-100 text-gray-700 hover:bg-gray-100';
   }
@@ -60,19 +60,19 @@ const getMethodBadge = (method: TeachingMethod) => {
       return {
         label: 'Physical',
         icon: MapPin,
-        className: 'bg-violet-600 text-white hover:bg-violet-600',
+        className: 'bg-[#feb139] text-white hover:bg-[#feb139]',
       };
     case 'Online':
       return {
         label: 'Online',
         icon: Monitor,
-        className: 'bg-emerald-600 text-white hover:bg-emerald-600',
+        className: 'bg-[#25476a] text-white hover:bg-[#25476a]',
       };
     case 'Google Meet':
       return {
         label: 'Google Meet',
         icon: Monitor,
-        className: 'bg-rose-600 text-white hover:bg-rose-600',
+        className: 'bg-[#38aae1] text-white hover:bg-[#38aae1]',
       };
   }
 };
